@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        /* Base Settings for all projects */
+        "target": "ES2020",
+        "useDefineForClassFields": true,
+        "module": "ESNext",
+        "lib": [
+            "ES2020",
+            "DOM"
+        ],
+        "skipLibCheck": true,
+        "isolatedModules": true,
+        /* Module Resolution */
+        "moduleResolution": "bundler",
+        /* Strictness & Linting */
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "noFallthroughCasesInSwitch": true
+    }
+}

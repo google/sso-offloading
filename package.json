@@ -1,0 +1,32 @@
+{
+  "name": "sso-offloading",
+  "version": "1.0.0",
+  "description": "Extension and TypeScript library for SSO offloading.",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/googlestaging/sso-offloading.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://github.com/googlestaging/sso-offloading#readme",
+  "devDependencies": {
+    "@types/chrome": "^0.0.326",
+    "@typescript-eslint/eslint-plugin": "^8.33.1",
+    "@typescript-eslint/parser": "^8.33.1",
+    "eslint": "^9.28.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.4.1",
+    "prettier": "^3.5.3"
+  }
+}

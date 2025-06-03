@@ -1,0 +1,13 @@
+# Dependency directories
+node_modules/
+
+# Build output
+dist/
+**/dist/
+
+# Lockfiles
+pnpm-lock.yaml
+
+# Config files (optional, but good practice)
+*.cjs
+*.json
