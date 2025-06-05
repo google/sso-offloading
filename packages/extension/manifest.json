@@ -13,7 +13,7 @@
     "http://*/*"
   ],
   "background": {
-    "service_worker": "service_worker.js"
+    "service_worker": "service_worker.ts"
   },
   "icons": {
     "16": "icons/icon16.png",
