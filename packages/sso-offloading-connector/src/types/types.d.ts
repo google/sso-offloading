@@ -44,6 +44,34 @@ interface ControlledFrame extends HTMLElement {
   print(): void;
 }
 
-interface ExtensionMessage {
+type PingMessage = {
+  type: 'ping';
+};
+
+type PongMessage = {
+  type: 'pong';
+};
+
+type UrlPayloadMessage = {
   url: string;
-}
+};
+
+type SsoRequestMessage = {
+  type: 'ssoRequest';
+} & UrlPayloadMessage;
+
+type SsoSuccessMessage = {
+  type: 'ssoSuccess';
+} & UrlPayloadMessage;
+
+type SsoErrorMessage = {
+  type: 'ssoError';
+  message: string;
+};
+
+type ExtensionMessage =
+  | PingMessage
+  | PongMessage
+  | SsoRequestMessage
+  | SsoSuccessMessage
+  | SsoErrorMessage;

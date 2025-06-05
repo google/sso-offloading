@@ -4,14 +4,25 @@ import {
   type ConnectorOptions,
 } from '../sso_offloading_connector';
 
+const createMockPort = () => ({
+  onMessage: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+  onDisconnect: {
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+  },
+  postMessage: vi.fn(),
+  disconnect: vi.fn(),
+});
+
 vi.stubGlobal('chrome', {
   runtime: {
-    sendMessage: vi.fn(),
+    connect: vi.fn().mockImplementation(() => createMockPort()),
     lastError: undefined,
   },
 });
-
-const mockChrome = chrome;
 
 describe('SsoOffloadingConnector', () => {
   let mockControlledFrame: ControlledFrame;
@@ -20,9 +31,13 @@ describe('SsoOffloadingConnector', () => {
     requestFilter: {
       urls: ['https://sso.example.com/*'],
     },
+    onError: vi.fn(),
+    onSuccess: vi.fn(),
   };
 
   beforeEach(() => {
+    vi.clearAllMocks();
+
     mockControlledFrame = {
       src: '',
       request: {
@@ -33,51 +48,81 @@ describe('SsoOffloadingConnector', () => {
       },
     } as ControlledFrame;
 
-    vi.clearAllMocks();
-    mockChrome.runtime.lastError = undefined;
+    chrome.runtime.lastError = undefined;
+    (chrome.runtime.connect as any).mockImplementation(() => createMockPort());
   });
 
+  async function getStartedConnectorAndPort() {
+    const connector = new SsoOffloadingConnector(
+      extensionId,
+      mockControlledFrame,
+      options
+    );
+    const startPromise = connector.start();
+
+    // Get the port that was just created by the `connect()` mock
+    const port = (chrome.runtime.connect as any).mock.results[0].value;
+    // Find the handshake listener the connector added and simulate a 'pong'.
+    port.onMessage.addListener.mock.calls[1][0]({
+      type: 'pong',
+    });
+
+    await startPromise;
+
+    return { connector, port };
+  }
+
   describe('request interception flow', () => {
-    it('should send a message and update src on successful extension response', () => {
+    it('should connect, start, intercept a request, and update src on success', async () => {
+      const { port } = await getStartedConnectorAndPort();
       const newUrl = 'https://myapp.com/callback?code=12345';
       const interceptedUrl = 'https://sso.example.com/login';
 
-      // Simulate a successful response from the extension
-      (mockChrome.runtime.sendMessage as any).mockImplementation(
-        (
-          _extId: string,
-          _message: ExtensionMessage,
-          callback: (response: ExtensionMessage) => void
-        ) => {
-          callback({ url: newUrl });
-        }
-      );
+      const blockingResponse =
+        mockControlledFrame.request.onBeforeRequest.addListener.mock.calls[0][0](
+          { url: interceptedUrl }
+        );
 
-      const connector = new SsoOffloadingConnector(
-        extensionId,
-        mockControlledFrame,
-        options
-      );
-      connector.start();
-
-      // Get the first argument that was ever passed to the `addListener` function.
-      const listener =
-        mockControlledFrame.request.onBeforeRequest.addListener.mock
-          .calls[0][0];
-      const blockingResponse = listener({ url: interceptedUrl });
-
-      // Check that the request was cancelled
+      //  Check that the request was cancelled and sent to the extension
       expect(blockingResponse).toEqual({ cancel: true });
+      // The first postMessage was the 'ping', the second is ssoRequest
+      expect(port.postMessage).toHaveBeenCalledTimes(2);
+      expect(port.postMessage).toHaveBeenCalledWith({
+        type: 'ssoRequest',
+        url: interceptedUrl,
+      } as SsoRequestMessage);
 
-      // Check that sendMessage was called correctly
-      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
-        extensionId,
-        { url: interceptedUrl },
-        expect.any(Function)
-      );
+      // Simulate the extension sending a successful response
+      port.onMessage.addListener.mock.calls[0][0]({
+        type: 'ssoSuccess',
+        url: newUrl,
+      } as SsoSuccessMessage);
 
-      // Check if controlled frame was redirected.
       expect(mockControlledFrame.src).toBe(newUrl);
+      expect(options.onSuccess).toHaveBeenCalledWith(newUrl);
+    });
+    it('should connect, start, intercept a request, and call onError on error', async () => {
+      const { port } = await getStartedConnectorAndPort();
+      const interceptedUrl = 'https://sso.example.com/login';
+
+      const blockingResponse =
+        mockControlledFrame.request.onBeforeRequest.addListener.mock.calls[0][0](
+          { url: interceptedUrl }
+        );
+
+      expect(blockingResponse).toEqual({ cancel: true });
+      expect(port.postMessage).toHaveBeenCalledTimes(2);
+      expect(port.postMessage).toHaveBeenCalledWith({
+        type: 'ssoRequest',
+        url: interceptedUrl,
+      } as SsoRequestMessage);
+
+      port.onMessage.addListener.mock.calls[0][0]({
+        type: 'ssoError',
+        message: 'Something went wrong',
+      } as SsoErrorMessage);
+
+      expect(options.onError).toHaveBeenCalled();
     });
   });
 });
