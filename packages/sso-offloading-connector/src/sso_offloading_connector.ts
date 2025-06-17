@@ -187,7 +187,6 @@ export class SsoOffloadingConnector {
 
   public stop(): void {
     if (!this.isStarted) {
-      console.warn('[SSO Connector] Connector is already stopped.');
       return;
     }
 

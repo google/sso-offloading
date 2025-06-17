@@ -27,7 +27,7 @@ interface ControlledFrame extends HTMLElement {
 
   // Scripting Methods
   addContentScripts(contentScriptList: ContentScriptDetails[]): Promise<void>;
-  executeScript(details?: InjectDetails | {}): Promise<any>;
+  executeScript(details?: InjectDetails): Promise<any>;
   insertCSS(details?: InjectDetails): Promise<void>;
   removeContentScripts(scriptNameList: string[]): Promise<void>;
 
