@@ -1,29 +1,22 @@
 {
-  "name": "SSO for IWA demo",
-  "description": "SSO for IWA demo",
+  "name": "SSO Offloading Handler",
+  "description": "Handles authentication flows delegated from a trusted application.",
   "version": "1.0.1",
   "manifest_version": 3,
   "permissions": [
     "tabs",
     "webRequest",
-    "webRequestBlocking"
+    "webRequestBlocking",
+    "storage"
   ],
   "host_permissions": [
     "https://*/*",
     "http://*/*"
   ],
   "background": {
-    "service_worker": "service_worker.ts"
-  },
-  "icons": {
-    "16": "icons/icon16.png",
-    "32": "icons/icon32.png",
-    "128": "icons/icon128.png"
+    "service_worker": "service_worker.js"
   },
   "externally_connectable": {
-    "matches": [
-      "isolated-app://*/*"
-    ],
     "ids": [
       "*"
     ]
