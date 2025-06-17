@@ -60,7 +60,6 @@ describe('SsoOffloadingConnector', () => {
     );
     const startPromise = connector.start();
 
-    // Get the port that was just created by the `connect()` mock
     const port = (chrome.runtime.connect as any).mock.results[0].value;
     // Find the handshake listener the connector added and simulate a 'pong'.
     port.onMessage.addListener.mock.calls[1][0]({
