@@ -2,7 +2,9 @@ name: Pull Request
 
 on:
   pull_request:
-
+  push:
+      branches:
+        - 'development' 
 jobs:
   lint-code:
     uses: ./.github/workflows/reusable-lint.yml
