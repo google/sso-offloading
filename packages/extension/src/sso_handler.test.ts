@@ -1,5 +1,14 @@
-import { vi, describe, it, expect, afterEach } from 'vitest';
-import { initializeSsoHandler } from './sso_handler';
+import { vi, describe, it, expect, afterEach, type Mock } from 'vitest';
+import SsoConnectionHandler, { initializeSsoHandler } from './sso_handler';
+
+const createMockChromeEvent = () => ({
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  hasListener: vi.fn().mockReturnValue(true),
+  addRules: vi.fn(),
+  removeRules: vi.fn(),
+  getRules: vi.fn(),
+});
 
 const mockChrome = {
   windows: {
@@ -7,95 +16,132 @@ const mockChrome = {
     remove: vi.fn(),
   },
   runtime: {
-    connect: vi.fn().mockImplementation(() => createMockPort()),
+    connect: vi.fn(),
     lastError: undefined,
-    onConnectExternal: {
-      addListener: vi.fn(),
-    },
-    onRemoved: {
-      addListener: vi.fn(),
-    },
+    onConnectExternal: createMockChromeEvent(),
   },
   tabs: {
-    remove: vi.fn().mockResolvedValue(undefined),
-    onRemoved: {
-      addListener: vi.fn(),
-      hasListener: vi.fn(),
-    },
+    remove: vi.fn(),
+    onRemoved: createMockChromeEvent(),
   },
   webRequest: {
-    onBeforeRequest: {
-      addListener: vi.fn(),
-      hasListener: vi.fn().mockReturnValue(true),
-      removeListener: vi.fn(),
-    },
+    onBeforeRequest: createMockChromeEvent(),
   },
 };
 
 vi.stubGlobal('chrome', mockChrome);
+vi.mock('./trusted_clients.json', () => ({
+  default: { 'isolated-app://trusted-app': { name: 'test app' } },
+}));
 
-const createMockPort = () => ({
-  sender: { id: 'test', origin: 'isolated-app://test' },
-  onMessage: {
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-  },
-  onDisconnect: {
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-  },
-  postMessage: vi.fn(),
-  disconnect: vi.fn(),
-});
+const createMockPort = (
+  origin = 'isolated-app://trusted-app'
+): chrome.runtime.Port =>
+  ({
+    name: 'sso-port',
+    sender: { id: 'test-sender', origin } as chrome.runtime.MessageSender,
+    onMessage: createMockChromeEvent(),
+    onDisconnect: createMockChromeEvent(),
+    postMessage: vi.fn(),
+    disconnect: vi.fn(),
+    // Cast is necessary because mock isn't a true class instance.
+  }) as unknown as chrome.runtime.Port;
 
-describe('SSO Offloading Extension', () => {
+describe('Service Worker Initialization', () => {
   afterEach(() => {
     vi.clearAllMocks();
-
-    mockChrome.runtime.lastError = undefined;
   });
 
-  it('should add a listener for external connections on setup', () => {
+  it('should add the onConnectExternal listener on setup', () => {
     initializeSsoHandler();
     expect(
       mockChrome.runtime.onConnectExternal.addListener
     ).toHaveBeenCalledOnce();
   });
 
-  it('should handle a full SSO flow successfully using a new tab', async () => {
+  it('should handle a new connection and attach listeners for a trusted origin', async () => {
     const mockPort = createMockPort();
+    const attachListenersSpy = vi.spyOn(
+      SsoConnectionHandler.prototype,
+      'attachListeners'
+    );
+
+    initializeSsoHandler();
+    const connectionHandler =
+      mockChrome.runtime.onConnectExternal.addListener.mock.calls[0][0];
+
+    // Simulate a connection
+    await connectionHandler(mockPort);
+
+    // Verify a new handler was created and listeners were attached
+    expect(attachListenersSpy).toHaveBeenCalledOnce();
+    expect(mockPort.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('should reject and disconnect connections from an untrusted origin', async () => {
+    const untrustedPort = createMockPort('https://untrusted.com');
+
+    initializeSsoHandler();
+    const connectionHandler =
+      mockChrome.runtime.onConnectExternal.addListener.mock.calls[0][0];
+
+    // Simulate a connection from an untrusted source
+    await expect(connectionHandler(untrustedPort)).rejects.toThrow(
+      'Sender not allowed.'
+    );
+
+    expect(untrustedPort.disconnect).toHaveBeenCalledOnce();
+  });
+});
+
+describe('SsoConnectionHandler', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+    if (mockChrome.runtime) {
+      mockChrome.runtime.lastError = undefined;
+    }
+    // Ensure tabs.remove promise resolves for cleanup steps
+    (mockChrome.tabs.remove as any).mockResolvedValue(undefined);
+  });
+
+  it('should attach listeners and respond to ping', () => {
+    const mockPort = createMockPort();
+    const handler = new SsoConnectionHandler(mockPort);
+
+    handler.attachListeners();
+
+    expect(mockPort.onMessage.addListener).toHaveBeenCalledOnce();
+    expect(mockPort.onDisconnect.addListener).toHaveBeenCalledOnce();
+
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+    messageHandler({ type: 'ping' });
+    expect(mockPort.postMessage).toHaveBeenCalledWith({ type: 'pong' });
+  });
+
+  it('should handle a full successful SSO flow', async () => {
+    const mockPort = createMockPort();
+    const handler = new SsoConnectionHandler(mockPort);
+    handler.attachListeners();
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+
     const ssoUrl =
       'https://idp.com/auth?redirect_uri=https://client.com/callback';
     const finalUrl = 'https://client.com/callback?code=12345';
 
-    initializeSsoHandler();
-    expect(chrome.runtime.onConnectExternal.addListener).toHaveBeenCalledOnce();
-
-    mockChrome.windows.create.mockResolvedValue({
+    (mockChrome.windows.create as any).mockResolvedValue({
       id: 101,
       tabs: [{ id: 202 }],
     });
 
-    // Simulate connection initialization.
-    const connectionHandler =
-      mockChrome.runtime.onConnectExternal.addListener.mock.calls[0][0];
-    await connectionHandler(mockPort);
-    expect(mockPort.onMessage.addListener).toHaveBeenCalledOnce();
-    expect(mockPort.onDisconnect.addListener).toHaveBeenCalledOnce();
+    // 1. Send SSO request
+    await messageHandler({ type: 'ssoRequest', payload: { url: ssoUrl } });
 
-    // Simulate a `ping` message. The extension should answer.
-    const messageHandler = mockPort.onMessage.addListener.mock.calls[0][0];
-    await messageHandler({
-      type: 'ping',
-    });
-    expect(mockPort.postMessage).toHaveBeenCalledWith({ type: 'pong' });
-
-    // Send SSO request to intercept.
-    await messageHandler({
-      type: 'ssoRequest',
-      payload: { url: ssoUrl },
-    });
-    // Verify the webRequest listener was added for the redirect URI.
+    // 2. Verify window was created and webRequest listener was added
+    expect(mockChrome.windows.create).toHaveBeenCalledWith(
+      expect.objectContaining({ url: ssoUrl })
+    );
     expect(
       mockChrome.webRequest.onBeforeRequest.addListener
     ).toHaveBeenCalledWith(
@@ -104,29 +150,126 @@ describe('SSO Offloading Extension', () => {
       ['blocking']
     );
 
-    // Extension should open a tab for SSO.
-    expect(mockChrome.windows.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: ssoUrl,
-        type: 'popup',
-      })
-    );
-
-    // Get the webRequest handler that was just added and call it.
+    // 3. Simulate the redirect being caught by the webRequest listener
     const webRequestHandler =
       mockChrome.webRequest.onBeforeRequest.addListener.mock.calls[0][0];
-    const blockingResponse = webRequestHandler({ url: finalUrl, tabId: 202 });
+    const blockingResponse = webRequestHandler({
+      url: finalUrl,
+      tabId: 202,
+      type: 'main_frame',
+      method: 'GET',
+      frameId: 0,
+      parentFrameId: -1,
+      requestId: '1',
+      timeStamp: Date.now(),
+    });
 
+    // 4. Assert the outcome
     expect(blockingResponse).toEqual({ cancel: true });
-    expect(mockPort.postMessage).toHaveBeenLastCalledWith({
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
       type: 'ssoSuccess',
       payload: { url: finalUrl },
     });
-
-    // The auth tab should be closed.
     expect(mockChrome.tabs.remove).toHaveBeenCalledWith(202);
     expect(
       mockChrome.webRequest.onBeforeRequest.removeListener
     ).toHaveBeenCalled();
+  });
+
+  it('should send an ssoError if the request URL is missing a redirect_uri', async () => {
+    const mockPort = createMockPort();
+    const handler = new SsoConnectionHandler(mockPort);
+    handler.attachListeners();
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+
+    await messageHandler({
+      type: 'ssoRequest',
+      payload: { url: 'https://idp.com/auth' },
+    });
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'ssoError',
+      payload: {
+        errorMessage: "The URL must contain a 'redirect_uri' search parameter.",
+      },
+    });
+    expect(mockChrome.windows.create).not.toHaveBeenCalled();
+  });
+
+  it('should send an ssoError if the authentication window fails to create', async () => {
+    const mockPort = createMockPort();
+    const creationError = new Error('Failed to create window');
+    (mockChrome.windows.create as any).mockRejectedValue(creationError);
+    const handler = new SsoConnectionHandler(mockPort);
+    handler.attachListeners();
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+
+    await messageHandler({
+      type: 'ssoRequest',
+      payload: { url: 'https://idp.com/auth?redirect_uri=x' },
+    });
+
+    expect(mockPort.postMessage).toHaveBeenCalledWith({
+      type: 'ssoError',
+      payload: { errorMessage: creationError.message },
+    });
+  });
+
+  it('should clean up listeners if the auth tab is closed manually', async () => {
+    const mockPort = createMockPort();
+    (mockChrome.windows.create as any).mockResolvedValue({
+      id: 101,
+      tabs: [{ id: 202 }],
+    });
+    const handler = new SsoConnectionHandler(mockPort);
+    handler.attachListeners();
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+
+    // Start the flow to add listeners
+    await messageHandler({
+      type: 'ssoRequest',
+      payload: { url: 'https://idp.com/auth?redirect_uri=x' },
+    });
+    expect(
+      mockChrome.webRequest.onBeforeRequest.addListener
+    ).toHaveBeenCalledTimes(1);
+
+    // Simulate the tab being closed by getting the registered listener and calling it
+    const tabRemovalHandler =
+      mockChrome.tabs.onRemoved.addListener.mock.calls[0][0];
+    await tabRemovalHandler(202);
+
+    expect(
+      mockChrome.webRequest.onBeforeRequest.removeListener
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it('should clean up listeners if the client port disconnects', async () => {
+    const mockPort = createMockPort();
+    const handler = new SsoConnectionHandler(mockPort);
+    handler.attachListeners();
+    const messageHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+
+    // Start the flow to add listeners
+    await messageHandler({
+      type: 'ssoRequest',
+      payload: { url: 'https://idp.com/auth?redirect_uri=x' },
+    });
+    expect(
+      mockChrome.webRequest.onBeforeRequest.addListener
+    ).toHaveBeenCalledTimes(1);
+
+    // Simulate the port disconnecting by getting the registered listener and calling it
+    const disconnectHandler = (mockPort.onDisconnect.addListener as Mock).mock
+      .calls[0][0];
+    await disconnectHandler();
+
+    expect(
+      mockChrome.webRequest.onBeforeRequest.removeListener
+    ).toHaveBeenCalledTimes(1);
   });
 });

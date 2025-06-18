@@ -1,20 +1,48 @@
-import {
-  InvalidRequestError,
-  TabCreationError,
-  UnauthorizedConnectionError,
-} from './errors';
+import { InvalidRequestError, TabCreationError } from './errors';
+import { UnauthorizedConnectionError } from './errors';
 import trustedClientsList from './trusted_clients.json';
 
-type WebRequestHandler = (
-  details: chrome.webRequest.OnBeforeRequestDetails
-) => chrome.webRequest.BlockingResponse | undefined;
-
 const REDIRECT_URI_PARAM = 'redirect_uri';
+const IWA_PREFIX = 'isolated-app://';
+
+/**
+ * Checks if the sender is either a trusted client or is existent in enterprise policy.
+ */
+async function isSenderAllowed(
+  sender: chrome.runtime.MessageSender
+): Promise<boolean> {
+  if (!sender.origin?.startsWith(IWA_PREFIX)) {
+    return false;
+  }
+
+  return Object.prototype.hasOwnProperty.call(
+    trustedClientsList,
+    sender.origin!
+  );
+}
+
+/**
+ * Handles a new connection from a single connector instance by creating a class instance.
+ */
+async function handleNewConnection(port: chrome.runtime.Port): Promise<void> {
+  if (!port.sender || !(await isSenderAllowed(port.sender!))) {
+    port.disconnect();
+    throw new UnauthorizedConnectionError('Sender not allowed.');
+  }
+  new SsoConnectionHandler(port).attachListeners();
+}
+
+/**
+ * Sets up the main listener for incoming connections from external applications.
+ */
+export async function initializeSsoHandler(): Promise<void> {
+  chrome.runtime.onConnectExternal.addListener(handleNewConnection);
+}
 
 /**
  * Manages the entire lifecycle of a single connection from a client application.
  */
-class SsoConnectionHandler {
+export default class SsoConnectionHandler {
   private readonly port: chrome.runtime.Port;
   private webRequestHandler: WebRequestHandler | null = null;
   private authTabId: number | null = null;
@@ -133,7 +161,7 @@ class SsoConnectionHandler {
   /**
    * Removes all listeners and closes any open resources for this connection.
    */
-  private cleanup = (): void => {
+  private cleanup = async (): Promise<void> => {
     console.log(
       '[SSO Extension] Cleaning up resources for port:',
       this.port.sender?.id
@@ -153,42 +181,10 @@ class SsoConnectionHandler {
 
     if (this.authTabId !== null) {
       const tabIdToClose = this.authTabId;
-      this.authTabId = null; // Clear immediately to prevent re-entry
-      chrome.tabs.remove(tabIdToClose).catch(() => {
-        // Ignore errors if the tab is already gone.
+      this.authTabId = null;
+      await chrome.tabs.remove(tabIdToClose).catch((error) => {
+        console.error('[SSO Extension] Error closing tab:', error);
       });
     }
   };
-}
-
-async function isSenderAllowed(
-  sender: chrome.runtime.MessageSender
-): Promise<boolean> {
-  const prefix = 'isolated-app://';
-  if (!sender.origin?.startsWith(prefix)) {
-    return false;
-  }
-
-  return Object.prototype.hasOwnProperty.call(
-    trustedClientsList,
-    sender.origin!
-  );
-}
-
-/**
- * Handles a new connection from a single connector instance by creating a class instance.
- */
-async function handleNewConnection(port: chrome.runtime.Port): Promise<void> {
-  if (!port.sender || !(await isSenderAllowed(port.sender!))) {
-    port.disconnect();
-    throw new UnauthorizedConnectionError('Sender not allowed.');
-  }
-  new SsoConnectionHandler(port).attachListeners();
-}
-
-/**
- * Sets up the main listener for incoming connections from external applications.
- */
-export async function initializeSsoHandler(): Promise<void> {
-  chrome.runtime.onConnectExternal.addListener(handleNewConnection);
 }
