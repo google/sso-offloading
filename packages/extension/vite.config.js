@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 export default defineConfig({
   build: {
@@ -10,12 +11,19 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        // This is important to ensure a single, clean output file
-        // name that you can reference in your manifest.json.
         entryFileNames: `service_worker.js`,
         chunkFileNames: `service_worker.js`,
       }
-    },
-    // emptyOutDir: true,
-  }
+    }
+  },
+  plugins: [
+    viteStaticCopy({
+      targets: [
+        {
+          src: 'src/manifest.json',
+          dest: '.'
+        }
+      ]
+    })
+  ]
 });
