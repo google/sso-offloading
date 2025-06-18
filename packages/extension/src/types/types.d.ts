@@ -14,7 +14,3 @@ type ExtensionMessage =
   | SsoRequestMessage
   | SsoSuccessMessage
   | SsoErrorMessage;
-
-type WebRequestHandler = (
-  details: chrome.webRequest.OnBeforeRequestDetails
-) => chrome.webRequest.BlockingResponse | undefined;
