@@ -1,127 +1,228 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import {
-  SsoOffloadingConnector,
-  type ConnectorOptions,
-} from '../sso_offloading_connector';
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
+import { createSsoOffloadingConnector } from '../sso_offloading_connector';
+import type {
+  ControlledFrame,
+  ExtensionMessage,
+  RequestFilter,
+  WebRequestInterceptor,
+} from '../types/types';
+import { CommunicationError } from '../errors';
 
-const createMockPort = () => ({
-  onMessage: {
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
+const mockInterceptor: WebRequestInterceptor = {
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: function (_event: Event): boolean {
+    throw new Error('Function not implemented.');
   },
-  onDisconnect: {
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-  },
-  postMessage: vi.fn(),
-  disconnect: vi.fn(),
-});
+};
+
+const mockSendMessage = vi.fn();
 
 vi.stubGlobal('chrome', {
   runtime: {
-    connect: vi.fn().mockImplementation(() => createMockPort()),
+    sendMessage: mockSendMessage,
     lastError: undefined,
   },
 });
 
-describe('SsoOffloadingConnector', () => {
+describe('createSsoOffloadingConnector', () => {
   let mockControlledFrame: ControlledFrame;
+  let mockCreateWebRequestInterceptor: Mock;
   const extensionId = 'test-extension-id';
-  const options: ConnectorOptions = {
-    requestFilter: {
-      urls: ['https://sso.example.com/*'],
-    },
-    onError: vi.fn(),
-    onSuccess: vi.fn(),
+  const requestFilter: RequestFilter = {
+    urls: ['https://sso.example.com/*'],
   };
+  const onSuccess = vi.fn();
+  const onError = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (mockInterceptor.addEventListener as Mock).mockClear();
+    (mockInterceptor.removeEventListener as Mock).mockClear();
+    chrome.runtime.lastError = undefined;
+  });
 
+  async function getStartedConnector() {
+    mockSendMessage.mockImplementationOnce((_extId, message, callback) => {
+      if (message.type === 'ping') {
+        callback({ type: 'pong' });
+      }
+    });
+
+    const connector = createSsoOffloadingConnector(
+      extensionId,
+      mockControlledFrame,
+      requestFilter,
+      onSuccess,
+      onError
+    );
+
+    await connector.start();
+    return connector;
+  }
+
+  beforeEach(() => {
+    mockCreateWebRequestInterceptor = vi.fn().mockReturnValue(mockInterceptor);
     mockControlledFrame = {
       src: '',
       request: {
-        onBeforeRequest: {
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-        },
+        createWebRequestInterceptor: mockCreateWebRequestInterceptor,
       },
-    } as ControlledFrame;
-
-    chrome.runtime.lastError = undefined;
-    (chrome.runtime.connect as any).mockImplementation(() => createMockPort());
+    } as unknown as ControlledFrame;
   });
 
-  async function getStartedConnectorAndPort() {
-    const connector = new SsoOffloadingConnector(
-      extensionId,
-      mockControlledFrame,
-      options
-    );
-    const startPromise = connector.start();
+  describe('start and stop', () => {
+    it('should create an interceptor and add a listener on start', async () => {
+      await getStartedConnector();
 
-    const port = (chrome.runtime.connect as any).mock.results[0].value;
-    // Find the handshake listener the connector added and simulate a 'pong'.
-    port.onMessage.addListener.mock.calls[1][0]({
-      type: 'pong',
+      expect(mockCreateWebRequestInterceptor).toHaveBeenCalledWith({
+        urlPatterns: requestFilter.urls,
+        resourceTypes: ['main_frame'],
+        blocking: true,
+      });
+
+      expect(mockInterceptor.addEventListener).toHaveBeenCalledWith(
+        'beforerequest',
+        expect.any(Function)
+      );
     });
 
-    await startPromise;
+    it('should remove the listener on stop', async () => {
+      const connector = await getStartedConnector();
+      const listener = (mockInterceptor.addEventListener as Mock).mock
+        .calls[0][1];
+      console.log(listener.toString());
+      connector.stop();
 
-    return { connector, port };
-  }
+      expect(mockInterceptor.removeEventListener).toHaveBeenCalledWith(
+        'beforerequest',
+        expect.any(Function)
+      );
+    });
+
+    it('should throw an error if started twice', async () => {
+      const connector = await getStartedConnector();
+      await expect(connector.start()).rejects.toThrow(
+        'Connector is already started.'
+      );
+    });
+
+    it('should handle handshake timeout and call onError', async () => {
+      vi.useFakeTimers();
+      const connector = createSsoOffloadingConnector(
+        extensionId,
+        mockControlledFrame,
+        requestFilter,
+        onSuccess,
+        onError
+      );
+
+      const startPromise = connector.start();
+      vi.runAllTimers();
+
+      await expect(startPromise).rejects.toThrow(CommunicationError);
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('timed out'),
+        })
+      );
+
+      vi.useRealTimers();
+    });
+  });
 
   describe('request interception flow', () => {
-    it('should connect, start, intercept a request, and update src on success', async () => {
-      const { port } = await getStartedConnectorAndPort();
+    it('should intercept a request and update src on success', async () => {
+      await getStartedConnector();
       const newUrl = 'https://myapp.com/callback?code=12345';
       const interceptedUrl = 'https://sso.example.com/login';
+      const mockPreventDefault = vi.fn();
 
-      const blockingResponse =
-        mockControlledFrame.request.onBeforeRequest.addListener.mock.calls[0][0](
-          { url: interceptedUrl }
-        );
+      const interceptorListener = (mockInterceptor.addEventListener as Mock)
+        .mock.calls[0][1];
 
-      //  Check that the request was cancelled and sent to the extension
-      expect(blockingResponse).toEqual({ cancel: true });
-      // The first postMessage was the 'ping', the second is ssoRequest
-      expect(port.postMessage).toHaveBeenCalledTimes(2);
-      expect(port.postMessage).toHaveBeenCalledWith({
-        type: 'ssoRequest',
-        url: interceptedUrl,
-      } as SsoRequestMessage);
+      // Set up the SSO request mock
+      mockSendMessage.mockImplementation((_extId, message, callback) => {
+        if (message.type === 'sso_request') {
+          callback({
+            type: 'success',
+            redirect_url: newUrl,
+          } as ExtensionMessage);
+        }
+      });
 
-      // Simulate the extension sending a successful response
-      port.onMessage.addListener.mock.calls[0][0]({
-        type: 'ssoSuccess',
-        url: newUrl,
-      } as SsoSuccessMessage);
+      interceptorListener({
+        request: { url: interceptedUrl },
+        preventDefault: mockPreventDefault,
+      });
 
+      expect(mockPreventDefault).toHaveBeenCalled();
+      expect(mockSendMessage).toHaveBeenCalledWith(
+        extensionId,
+        { type: 'sso_request', url: interceptedUrl },
+        expect.any(Function)
+      );
       expect(mockControlledFrame.src).toBe(newUrl);
-      expect(options.onSuccess).toHaveBeenCalledWith(newUrl);
+      expect(onSuccess).toHaveBeenCalledWith(newUrl);
+      expect(onError).not.toHaveBeenCalled();
     });
-    it('should connect, start, intercept a request, and call onError on error', async () => {
-      const { port } = await getStartedConnectorAndPort();
+
+    it('should intercept a request and call onError on error response', async () => {
+      await getStartedConnector();
       const interceptedUrl = 'https://sso.example.com/login';
+      const errorMessage = 'Authentication failed';
+      const mockPreventDefault = vi.fn();
 
-      const blockingResponse =
-        mockControlledFrame.request.onBeforeRequest.addListener.mock.calls[0][0](
-          { url: interceptedUrl }
-        );
+      const interceptorListener = (mockInterceptor.addEventListener as Mock)
+        .mock.calls[0][1];
 
-      expect(blockingResponse).toEqual({ cancel: true });
-      expect(port.postMessage).toHaveBeenCalledTimes(2);
-      expect(port.postMessage).toHaveBeenCalledWith({
-        type: 'ssoRequest',
-        url: interceptedUrl,
-      } as SsoRequestMessage);
+      // Set up the SSO request mock for an error response
+      mockSendMessage.mockImplementation((_extId, message, callback) => {
+        if (message.type === 'sso_request') {
+          callback({
+            type: 'error',
+            message: errorMessage,
+          } as ExtensionMessage);
+        }
+      });
 
-      port.onMessage.addListener.mock.calls[0][0]({
-        type: 'ssoError',
-        message: 'Something went wrong',
-      } as SsoErrorMessage);
+      interceptorListener({
+        request: { url: interceptedUrl },
+        preventDefault: mockPreventDefault,
+      });
 
-      expect(options.onError).toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.any(CommunicationError));
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          details: errorMessage,
+        })
+      );
+      expect(onSuccess).not.toHaveBeenCalled();
+    });
+
+    it('should call onError if extension provides no response', async () => {
+      await getStartedConnector();
+      const interceptorListener = (mockInterceptor.addEventListener as Mock)
+        .mock.calls[0][1];
+
+      // Mock a call that provides no response to the callback
+      mockSendMessage.mockImplementation((_extId, message, callback) => {
+        if (message.type === 'sso_request') {
+          callback(undefined);
+        }
+      });
+
+      interceptorListener({
+        request: { url: 'https://sso.example.com' },
+        preventDefault: vi.fn(),
+      });
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            'The extension did not provide a response for the SSO request.',
+        })
+      );
     });
   });
 });

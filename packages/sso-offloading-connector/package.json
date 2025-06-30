@@ -4,17 +4,25 @@
   "version": "0.0.0",
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "src"
   ],
-  "main": "./dist/my-lib.umd.cjs",
-  "module": "./dist/my-lib.js",
+  "main": "./dist/sso-offloading-connector.umd.cjs",
+  "module": "./dist/sso-offloading-connector.js",
+  "types": "./dist/sso-offloading-connector.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/my-lib.js",
-      "require": "./dist/my-lib.umd.cjs"
+      "types": "./dist/sso-offloading-connector.d.ts",
+      "import": "./dist/sso-offloading-connector.js",
+      "require": "./dist/sso-offloading-connector.umd.cjs"
     }
   },
-  "dependencies": {
-    "@types/chrome": "^0.0.326"
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.326",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
   }
 }

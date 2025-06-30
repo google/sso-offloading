@@ -1,5 +1,5 @@
 /* https://wicg.github.io/controlled-frame/#html-element */
-interface ControlledFrame extends HTMLElement {
+export interface ControlledFrame extends HTMLElement {
   src: string;
   name: string;
   allowfullscreen: boolean;
@@ -14,7 +14,7 @@ interface ControlledFrame extends HTMLElement {
 
   readonly contentWindow: WindowProxy;
   readonly contextMenus: ContextMenus;
-  readonly request: WebRequest;
+  readonly request: ControlledFrameWebRequest;
 
   // Navigation methods
   back(): Promise<void>;
@@ -44,34 +44,130 @@ interface ControlledFrame extends HTMLElement {
   print(): void;
 }
 
-type PingMessage = {
-  type: 'ping';
-};
+export interface ControlledFrameWebRequest {
+  createWebRequestInterceptor(
+    options: CreateWebRequestInterceptorOptions
+  ): WebRequestInterceptor;
+  handlerBehaviorChanged(): Promise<void>;
+}
+/**
+ * Represents the WebRequestInterceptor, which allows listening to various
+ * stages of a web request. It extends EventTarget to allow for standard
+ * event listener patterns.
+ */
+export interface WebRequestInterceptor extends EventTarget {
+  /**
+   * Adds a listener for a web request event.
+   * @param type The type of event to listen for.
+   * @param listener The function that will be called when the event occurs.
+   * @param options Optional settings for the listener.
+   */
+  addEventListener(
+    type: 'authrequired',
+    listener: WebRequestListener<AuthRequiredEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'beforeredirect',
+    listener: WebRequestListener<BeforeRedirectEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'beforerequest',
+    listener: WebRequestListener<BeforeRequestEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'beforesendheaders',
+    listener: WebRequestListener<BeforeSendHeadersEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'completed',
+    listener: WebRequestListener<CompletedEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'erroroccurred',
+    listener: WebRequestListener<ErrorOccurredEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'headersreceived',
+    listener: WebRequestListener<HeadersReceivedEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'responsestarted',
+    listener: WebRequestListener<ResponseStartedEvent>,
+    options?: AddEventListenerOptions
+  ): void;
+  addEventListener(
+    type: 'sendheaders',
+    listener: WebRequestListener<SendHeadersEvent>,
+    options?: AddEventListenerOptions
+  ): void;
 
-type PongMessage = {
-  type: 'pong';
-};
+  /**
+   * Removes a listener for a web request event.
+   * @param type The type of event the listener was added for.
+   * @param listener The listener function to remove.
+   * @param options Optional settings that were used when adding the listener.
+   */
+  removeEventListener(
+    type: 'authrequired',
+    listener: WebRequestListener<AuthRequiredEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'beforeredirect',
+    listener: WebRequestListener<BeforeRedirectEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'beforerequest',
+    listener: WebRequestListener<BeforeRequestEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'beforesendheaders',
+    listener: WebRequestListener<BeforeSendHeadersEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'completed',
+    listener: WebRequestListener<CompletedEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'erroroccurred',
+    listener: WebRequestListener<ErrorOccurredEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'headersreceived',
+    listener: WebRequestListener<HeadersReceivedEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'responsestarted',
+    listener: WebRequestListener<ResponseStartedEvent>,
+    options?: EventListenerOptions
+  ): void;
+  removeEventListener(
+    type: 'sendheaders',
+    listener: WebRequestListener<SendHeadersEvent>,
+    options?: EventListenerOptions
+  ): void;
+}
 
-type UrlPayloadMessage = {
-  url: string;
-};
+export interface RequestFilter {
+  urls: string[];
+  types?: chrome.webRequest.RequestFilter['types'];
+}
 
-type SsoRequestMessage = {
-  type: 'ssoRequest';
-} & UrlPayloadMessage;
-
-type SsoSuccessMessage = {
-  type: 'ssoSuccess';
-} & UrlPayloadMessage;
-
-type SsoErrorMessage = {
-  type: 'ssoError';
-  message: string;
-};
-
-type ExtensionMessage =
-  | PingMessage
-  | PongMessage
-  | SsoRequestMessage
-  | SsoSuccessMessage
-  | SsoErrorMessage;
+export type ExtensionMessage =
+  | { type: 'pong' }
+  | { type: 'success'; redirect_url: string }
+  | { type: 'error'; message: string }
+  | { type: 'cancel' };
