@@ -1,0 +1,28 @@
+{
+    "id": "/",
+    "short_name": "IWA B",
+    "name": "Basic IWA Example",
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "update_manifest_url": "https://narxnufay1lck8jc.public.blob.vercel-storage.com/update_manifest.json",
+    "icons": [
+        {
+          "src": "/images/icon.png",
+          "type": "image/png",
+          "sizes": "512x512",
+          "purpose": "any maskable"
+        }
+      ],
+    "start_url": "/",
+    "display": "standalone",
+    "display_override": ["borderless"],
+    "scope": "/",
+    "isolated_storage": true,
+    "permissions_policy": {
+      "cross-origin-isolated": ["self"],
+      "direct-sockets": ["self"],
+      "controlled-frame": ["self"],
+      "window-management": ["self"],
+      "all-screens-capture": ["self"]
+    }
+  }

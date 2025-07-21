@@ -1,0 +1,23 @@
+{
+  "name": "simple-iwa-example",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A basic Isolated Web App example.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "sso-offloading-connector": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14",
+    "dotenv": "^16.4.2",
+    "rollup-plugin-webbundle": "^0.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "vite-plugin-html-inject": "^1.1.2",
+    "wbn-sign": "^0.2.0"
+  }
+}
