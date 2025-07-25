@@ -33,7 +33,7 @@ const connectorOptions: ConnectorOptions = {
 // 2. Create a new instance of the connector
 const ssoConnector = new SsoOffloadingConnector(
   SSO_EXTENSION_ID,
-  webviewElement,
+  cfElement,
   connectorOptions
 );
 

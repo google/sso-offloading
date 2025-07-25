@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "pnpm -r run build",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
@@ -16,7 +16,8 @@
     "url": "git+https://github.com/googlestaging/sso-offloading.git"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "keywords": [],
   "author": "",
