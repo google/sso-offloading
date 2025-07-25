@@ -5,13 +5,13 @@ import type {
   ExtensionMessage,
   RequestFilter,
   WebRequestInterceptor,
-} from '../types/types';
+} from '../types';
 import { CommunicationError } from '../errors';
 
 const mockInterceptor: WebRequestInterceptor = {
   addEventListener: vi.fn(),
   removeEventListener: vi.fn(),
-  dispatchEvent: function (_event: Event): boolean {
+  dispatchEvent: function (event: Event): boolean {
     throw new Error('Function not implemented.');
   },
 };
