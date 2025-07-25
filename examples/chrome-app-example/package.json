@@ -1,0 +1,16 @@
+{
+  "name": "chrome-app-example",
+  "version": "1.0.0",
+  "description": "A simple SSO offloading Chrome App example.",
+  "main": "index.js",
+  "scripts": {
+    "build": "cpx 'src/**' dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.12.1",
+  "devDependencies": {
+    "cpx": "^1.5.0"
+  }
+}
