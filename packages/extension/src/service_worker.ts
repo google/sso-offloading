@@ -1,3 +1,3 @@
-import { initializeSsoHandler } from './sso_handler';
+import initializeSsoHandler from './sso_handler';
 
 initializeSsoHandler();

@@ -1,16 +1,11 @@
-type WebRequestHandler = (
-  details: chrome.webRequest.OnBeforeRequestDetails
-) => chrome.webRequest.BlockingResponse;
+// Messages received from the IWA
+type SsoRequestMessage =
+  | { type: 'ping' }
+  | { type: 'sso_request'; url: string };
 
-type PingMessage = { type: 'ping' };
-type PongMessage = { type: 'pong' };
-type SsoRequestMessage = { type: 'ssoRequest'; payload: { url: string } };
-type SsoSuccessMessage = { type: 'ssoSuccess'; payload: { url: string } };
-type SsoErrorMessage = { type: 'ssoError'; payload: { errorMessage: string } };
-
+// Messages sent to the IWA
 type ExtensionMessage =
-  | PingMessage
-  | PongMessage
-  | SsoRequestMessage
-  | SsoSuccessMessage
-  | SsoErrorMessage;
+  | { type: 'pong' }
+  | { type: 'success'; redirect_url: string }
+  | { type: 'error'; message: string }
+  | { type: 'cancel' };

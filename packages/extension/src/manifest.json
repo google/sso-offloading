@@ -6,7 +6,7 @@
   "permissions": [
     "tabs",
     "webRequest",
-    "webRequestBlocking",
+    "webNavigation",
     "storage"
   ],
   "host_permissions": [
@@ -17,8 +17,8 @@
     "service_worker": "service_worker.js"
   },
   "externally_connectable": {
-    "ids": [
-      "*"
+"matches": [
+      "isolated-app://*"
     ]
   },
   "update_url": "http://127.0.0.1:8888/update_manifest.xml"
