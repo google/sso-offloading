@@ -21,7 +21,7 @@ export default defineConfig({
       targets: [
         {
           src: 'src/manifest.json',
-          dest: '.'
+          dist: '.'
         }
       ]
     })
