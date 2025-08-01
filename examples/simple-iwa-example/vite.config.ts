@@ -4,6 +4,7 @@ import injectHTML from 'vite-plugin-html-inject';
 import wbn from 'rollup-plugin-webbundle';
 import * as wbnSign from 'wbn-sign';
 import dotenv from 'dotenv';
+import path from 'path';  
 
 dotenv.config();
 
@@ -55,8 +56,16 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: './index.html',
+        main: './src/index.html',
       },
     },
   },
+  resolve: {
+        alias: {
+          'sso-offloading-connector': path.resolve(
+            __dirname,
+            '../../packages/sso-offloading-connector/src/index.ts' 
+          ),
+        },
+  }
 });
