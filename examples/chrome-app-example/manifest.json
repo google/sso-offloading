@@ -1,0 +1,25 @@
+{
+  "manifest_version": 2,
+  "name": "SSO Offloading Chrome App",
+  "version": "1.14",
+  "app": {
+    "background": {
+      "scripts": [
+        "background.js"
+      ]
+    }
+  },
+  "permissions": [
+    "tabs",
+    "webRequest",
+    "webview",
+    "webNavigation",
+    "storage"
+  ],
+  "externally_connectable": {
+    "matches": [
+      "<all_urls>"
+    ]
+  },
+  "update_url": "http://127.0.0.1:8888/update_manifest.xml"
+}
