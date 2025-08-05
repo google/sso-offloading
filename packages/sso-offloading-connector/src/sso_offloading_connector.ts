@@ -4,58 +4,47 @@ import {
   InvalidResponseError,
   type SsoConnectorError,
 } from './errors';
-import type { ControlledFrame, ExtensionMessage, RequestFilter } from './types';
+import type { ExtensionMessage, RequestFilter } from './types';
 
 export interface SsoConnector {
   start: (timeoutMs?: number) => Promise<void>;
   stop: () => void;
 }
 
-export const createSsoOffloadingConnector = (
+// This interface defines the specific actions that differ between platforms
+// (IWA's ControlledFrame vs. Chrome App's <webview>).
+interface InterceptorImplementation {
+  attach: (
+    listener: (details: { url: string }) => void,
+    filter: { urls: string[]; types?: string[] }
+  ) => void;
+  detach: (listener: (details: { url: string }) => void) => void;
+  updateSrc: (url: string) => void;
+}
+
+// Core offloading logic.
+const createSsoConnectorInternal = (
   extensionId: string,
-  controlledFrame: ControlledFrame,
+  implementation: InterceptorImplementation,
   requestFilter: RequestFilter,
   onSuccess?: (url: string) => void,
   onError?: (error: SsoConnectorError) => void
 ): SsoConnector => {
 
-  console.log('[SSO Connector DEBUG] Initializing with config:', {
-    extensionId,
-    controlledFrame,
-    requestFilter,
-  });
-
-  if (!extensionId || !controlledFrame || !requestFilter?.urls?.length) {
-    const reason = !extensionId
-      ? 'extensionId is required'
-      : !controlledFrame
-        ? 'controlledFrame is required'
-        : 'requestFilter.urls must be a non-empty array';
-    throw new ConfigurationError(
-      `[SSO Connector] Configuration Error: ${reason}`
-    );
-  }
-
   const finalRequestFilter = {
     ...requestFilter,
     types: requestFilter.types ?? ['main_frame'],
   };
-  console.log(
-    '[SSO Connector DEBUG] Final request filter:',
-    finalRequestFilter
-  );
 
   const handleSuccess =
     onSuccess ??
     ((url) => {
-      console.log('[SSO Connector DEBUG] Using default onSuccess handler.');
       console.log(`[SSO Connector] Successfully handled URL: ${url}`);
     });
 
   const handleError =
     onError ??
     ((error) => {
-      console.log('[SSO Connector DEBUG] Using default onError handler.');
       console.error(
         `[SSO Connector] ${error.name}: ${error.message}`,
         error.details ?? ''
@@ -64,108 +53,64 @@ export const createSsoOffloadingConnector = (
 
   let isRequestInFlight = false;
   let isStarted = false;
-  let interceptor: any;
 
   const handleInterceptRequest = (details: { url: string }): void => {
-    console.log(`[SSO Connector DEBUG] Intercepted request to: ${details.url}`);
-
     if (isRequestInFlight) {
       console.warn(
-        `[SSO Connector] Ignoring parallel request to ${details.url} while another is in flight.`
+        `[SSO Connector] Ignoring parallel request to ${details.url}`
       );
       return;
     }
-
     isRequestInFlight = true;
-    console.log('[SSO Connector DEBUG] Set isRequestInFlight to true.');
 
     const message = { type: 'sso_request', url: details.url };
-    console.log(
-      `[SSO Connector DEBUG] Sending message to extension "${extensionId}":`,
-      message
-    );
-
     chrome.runtime.sendMessage(
       extensionId,
       message,
       (response: ExtensionMessage) => {
-        console.log(
-          '[SSO Connector DEBUG] Received response from extension:',
-          response
-        );
         isRequestInFlight = false;
-        console.log('[SSO Connector DEBUG] Set isRequestInFlight to false.');
 
         if (chrome.runtime.lastError) {
-          console.error(
-            '[SSO Connector DEBUG] chrome.runtime.lastError found:',
-            chrome.runtime.lastError
-          );
           handleError(
-            new CommunicationError(
-              'A communication error occurred while sending the SSO request.',
-              { originalError: chrome.runtime.lastError }
-            )
+            new CommunicationError('Communication error sending request.', {
+              originalError: chrome.runtime.lastError,
+            })
           );
           return;
         }
-
         if (!response) {
-          console.error(
-            '[SSO Connector DEBUG] Response was empty or undefined.'
-          );
           handleError(
-            new CommunicationError(
-              'The extension did not provide a response for the SSO request.'
-            )
+            new CommunicationError('The extension did not provide a response.')
           );
           return;
         }
 
         switch (response.type) {
           case 'success':
-            console.log('[SSO Connector DEBUG] Handling "success" response.');
-            if (
-              !response?.redirect_url ||
-              typeof response.redirect_url !== 'string'
-            ) {
-              console.error(
-                '[SSO Connector DEBUG] Invalid success response received:',
-                response
-              );
-              handleError(
-                new InvalidResponseError(
-                  'Received an invalid success message.',
-                  { received: response }
-                )
-              );
-            } else {
-              console.log(
-                `[SSO Connector DEBUG] Setting controlledFrame.src to: ${response.redirect_url}`
-              );
-              controlledFrame.src = response.redirect_url;
+            if (typeof response.redirect_url === 'string') {
+              implementation.updateSrc(response.redirect_url);
               handleSuccess(response.redirect_url);
+            } else {
+              handleError(
+                new InvalidResponseError('Invalid success message.', {
+                  received: response,
+                })
+              );
             }
             break;
           case 'error':
-            console.warn('[SSO Connector DEBUG] Handling "error" response.');
             handleError(
               new CommunicationError(
-                'The extension reported an error during SSO.',
+                'Extension reported an error.',
                 response.message
               )
             );
             break;
           default:
-            console.error(
-              `[SSO Connector DEBUG] Received unknown response type: "${response.type}"`,
-              response
-            );
             handleError(
-              new InvalidResponseError(
-                'Received an unexpected response type from the extension.',
-                { received: response }
-              )
+              new InvalidResponseError('Unexpected response type.', {
+                received: response,
+              })
             );
             break;
         }
@@ -174,32 +119,15 @@ export const createSsoOffloadingConnector = (
   };
 
   const start = async (timeoutMs = 3000): Promise<void> => {
-    console.log('[SSO Connector DEBUG] start() called.');
     if (isStarted) {
-      console.warn(
-        '[SSO Connector DEBUG] start() called but connector is already running.'
-      );
-      const error = new ConfigurationError('Connector is already started.');
-      handleError(error);
-    }
-
-    if (!chrome?.runtime?.sendMessage) {
-      const error = new ConfigurationError(
-        'SSO Connector cannot start: chrome.runtime.sendMessage is not available...'
-      );
-      handleError(error);
+      handleError(new ConfigurationError('Connector is already started.'));
+      return;
     }
 
     await new Promise<void>((resolve, reject) => {
-      console.log(
-        `[SSO Connector DEBUG] Pinging extension with a ${timeoutMs}ms timeout.`
-      );
       const timeoutId = setTimeout(() => {
-        console.error('[SSO Connector DEBUG] Ping timed out.');
         reject(
-          new CommunicationError(
-            `Connection to extension timed out after ${timeoutMs}ms.`
-          )
+          new CommunicationError(`Connection timed out after ${timeoutMs}ms.`)
         );
       }, timeoutMs);
 
@@ -208,79 +136,147 @@ export const createSsoOffloadingConnector = (
         { type: 'ping' },
         (response: ExtensionMessage) => {
           clearTimeout(timeoutId);
-          console.log(
-            '[SSO Connector DEBUG] Received ping response:',
-            response
-          );
-
           if (chrome.runtime.lastError) {
-            console.error(
-              '[SSO Connector DEBUG] chrome.runtime.lastError on ping:',
-              chrome.runtime.lastError
-            );
             return reject(
-              new CommunicationError(
-                'Failed to connect. The extension may not be installed or enabled.',
-                { extensionError: chrome.runtime.lastError }
-              )
+              new CommunicationError('Failed to connect to extension.', {
+                extensionError: chrome.runtime.lastError,
+              })
             );
           }
           if (response?.type === 'pong') {
-            console.log(
-              '[SSO Connector DEBUG] Handshake successful (ping/pong).'
-            );
             resolve();
           } else {
-            console.error(
-              '[SSO Connector DEBUG] Invalid handshake response:',
-              response
-            );
             reject(
-              new InvalidResponseError(
-                'Received an invalid handshake response from the extension.',
-                { received: response }
-              )
+              new InvalidResponseError('Invalid handshake response.', {
+                received: response,
+              })
             );
           }
         }
       );
     }).catch((error) => {
       handleError(error);
+      throw error; 
     });
 
-    console.log('[SSO Connector DEBUG] Creating WebRequest interceptor.');
-    interceptor = controlledFrame.request.createWebRequestInterceptor({
-      urlPatterns: finalRequestFilter.urls,
-      resourceTypes: finalRequestFilter.types,
-      blocking: true,
-    });
-
-    interceptor.addEventListener('beforerequest', (e: any) => {
-      e.preventDefault();
-      handleInterceptRequest(e.request);
-    });
+    implementation.attach(handleInterceptRequest, finalRequestFilter);
 
     isStarted = true;
     console.log('[SSO Connector] Connector started successfully.');
   };
 
   const stop = (): void => {
-    console.log('[SSO Connector DEBUG] stop() called with state:', {
-      isStarted,
-      isRequestInFlight,
-    });
     if (!isStarted) {
-      console.log(
-        '[SSO Connector DEBUG] stop() called but connector was not running.'
-      );
       return;
     }
-    interceptor.removeEventListener('beforerequest', handleInterceptRequest);
-    interceptor = null;
+    implementation.detach(handleInterceptRequest);
     isStarted = false;
     isRequestInFlight = false;
-    console.log('[SSO Connector] Connector stopped and state has been reset.');
   };
 
   return { start, stop };
+};
+
+// ==================================================================
+// ==                 PUBLIC FUNCTIONS                     ==
+// ==================================================================
+
+/**
+ * Creates an SSO connector for an Isolated Web App using a ControlledFrame.
+ */
+export const createSsoOffloadingConnector = (
+  extensionId: string,
+  controlledFrame: any, // Should be changed once ControlledFrame type is exposed via @types/chrome
+  requestFilter: RequestFilter,
+  onSuccess?: (url: string) => void,
+  onError?: (error: SsoConnectorError) => void
+): SsoConnector => {
+  if (!extensionId || !controlledFrame || !requestFilter?.urls?.length) {
+    throw new ConfigurationError('Invalid configuration for IWA connector.');
+  }
+
+  let interceptor: any;
+
+  const iwaImplementation: InterceptorImplementation = {
+    attach: (listener, filter) => {
+      interceptor = controlledFrame.request.createWebRequestInterceptor({
+        urlPatterns: filter.urls,
+        resourceTypes: filter.types,
+        blocking: true,
+      });
+      interceptor.addEventListener('beforerequest', (e: any) => {
+        e.preventDefault();
+        listener(e.request);
+      });
+    },
+    detach: (listener) => {
+      if (interceptor) {
+        interceptor.removeEventListener('beforerequest', listener);
+        interceptor = null;
+      }
+    },
+    updateSrc: (url) => {
+      controlledFrame.src = url;
+    },
+  };
+
+  return createSsoConnectorInternal(
+    extensionId,
+    iwaImplementation,
+    requestFilter,
+    onSuccess,
+    onError
+  );
+};
+
+/**
+ * Creates an SSO connector for a Chrome App using a <webview> tag.
+ */
+export const createSsoOffloadingConnectorForChromeApp = (
+  extensionId: string,
+  webview: any, // WebView HTML element.
+  requestFilter: RequestFilter,
+  onSuccess?: (url: string) => void,
+  onError?: (error: SsoConnectorError) => void
+): SsoConnector => {
+  if (!extensionId || !webview || !requestFilter?.urls?.length) {
+    throw new ConfigurationError(
+      'Invalid configuration for Chrome App connector.'
+    );
+  }
+
+  let webRequestListener:
+    | ((details: { url: string }) => { cancel: boolean })
+    | null = null;
+
+  const chromeAppImplementation: InterceptorImplementation = {
+    attach: (listener, filter) => {
+      webRequestListener = (details: { url: string }) => {
+        listener(details);
+        return { cancel: true }; 
+      };
+      webview.request.onBeforeRequest.addListener(
+        webRequestListener,
+        { urls: filter.urls, types: filter.types },
+        ['blocking']
+      );
+    },
+    detach: () => {
+      if (webRequestListener) {
+        webview.request.onBeforeRequest.removeListener(webRequestListener);
+        webRequestListener = null;
+      }
+    },
+    updateSrc: (url) => {
+      webview.src = url;
+    },
+  };
+
+  return createSsoConnectorInternal(
+    extensionId,
+    chromeAppImplementation,
+    requestFilter,
+    onSuccess,
+    onError
+  );
 };
