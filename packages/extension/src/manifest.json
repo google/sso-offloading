@@ -17,8 +17,9 @@
     "service_worker": "service_worker.js"
   },
   "externally_connectable": {
+    "ids": ["fakmagfpajpeenadaopjjcffegfnmkef"],
 "matches": [
-      "isolated-app://*"
+      "<all_urls>"
     ]
   },
   "update_url": "http://127.0.0.1:8888/update_manifest.xml"

@@ -14,8 +14,7 @@ const handleExternalMessage = (
     }
     return false;
   }
-
-  const flowId = sender.documentId;
+  const flowId = sender.origin;
 
   if (!flowId) {
     console.error('[SSO] Request rejected: Sender has no documentId.');
