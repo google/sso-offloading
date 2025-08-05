@@ -9,7 +9,7 @@ export default [
       "node_modules",
       "dist",
       "**/dist",
-      ".eslintrc.cjs",
+      "eslint.config.js",
       "vite.config.ts",
     ],
   },
@@ -26,6 +26,7 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
+        ...globals.webextensions,
       },
     },
     rules: {
