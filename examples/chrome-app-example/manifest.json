@@ -16,10 +16,5 @@
     "webNavigation",
     "storage"
   ],
-  "externally_connectable": {
-    "matches": [
-      "<all_urls>"
-    ]
-  },
   "update_url": "http://127.0.0.1:8888/update_manifest.xml"
 }

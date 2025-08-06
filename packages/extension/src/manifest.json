@@ -17,8 +17,10 @@
     "service_worker": "service_worker.js"
   },
   "externally_connectable": {
-    "ids": ["fakmagfpajpeenadaopjjcffegfnmkef"],
-"matches": [
+    "ids": [
+      "abaaiopbfcagdjfghfmbiifjolfnlagf"
+    ],
+    "matches": [
       "<all_urls>"
     ]
   },

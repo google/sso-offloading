@@ -106,6 +106,7 @@ const handleExternalMessage = (
     }
   })();
 
+  // Return true to indicate that the response will be sent asynchronously.
   return true;
 };
 

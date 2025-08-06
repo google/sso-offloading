@@ -1,5 +1,6 @@
 import { createSsoOffloadingConnectorForChromeApp } from 'sso-offloading-connector';
 
+const ssoForm = document.getElementById('ssoForm');
 const extensionIdInput = document.getElementById('extensionId');
 const authUrlInput = document.getElementById('authUrl');
 const enableSsoOffloadingButton = document.getElementById(
@@ -12,7 +13,7 @@ let ssoConnector = null;
 
 const handleSuccess = (url) => {
   statusContainer.className = 'success';
-  statusContainer.innerHTML = `✅ Success! The connector has redirected the webview. Final URL: ${url}`;
+  statusContainer.innerHTML = `✅ Success! The connector has redirected the webview.`;
 };
 
 const handleError = (error) => {
@@ -46,13 +47,9 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
       handleSuccess,
       handleError
     );
-
-    await ssoConnector.start().then(
-      ()=>{
+    await ssoConnector.start();
 statusContainer.textContent =
       '✅ Connector started. Navigating to auth URL to trigger interception...';
-      }
-    );
 
     const navigationUrl = authUrl.replace('/*', '/');
     ssoWebview.src = navigationUrl;
@@ -61,7 +58,8 @@ statusContainer.textContent =
   }
 };
 
-enableSsoOffloadingButton.addEventListener('click', () => {
+ssoForm.addEventListener('submit', (event) => {
+  event.preventDefault();
   const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
   if (extensionId && authUrl) {
