@@ -1,4 +1,4 @@
 node_modules/
 build.sh
-examples/simple-iwa-example/dist/*
-packages/extension/dist/*
+examples/simple-iwa-example/certs
+dist*/
