@@ -1,8 +1,8 @@
 export interface ControlledFrameWebRequest {
   createWebRequestInterceptor(
     options: CreateWebRequestInterceptorOptions
-  ): WebRequestInterceptor;
-  handlerBehaviorChanged(): Promise<void>;
+  ): WebRequestInterceptor
+  handlerBehaviorChanged(): Promise<void>
 }
 /**
  * Represents the WebRequestInterceptor, which allows listening to various
@@ -20,47 +20,47 @@ export interface WebRequestInterceptor extends EventTarget {
     type: 'authrequired',
     listener: WebRequestListener<AuthRequiredEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'beforeredirect',
     listener: WebRequestListener<BeforeRedirectEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'beforerequest',
     listener: WebRequestListener<BeforeRequestEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'beforesendheaders',
     listener: WebRequestListener<BeforeSendHeadersEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'completed',
     listener: WebRequestListener<CompletedEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'erroroccurred',
     listener: WebRequestListener<ErrorOccurredEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'headersreceived',
     listener: WebRequestListener<HeadersReceivedEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'responsestarted',
     listener: WebRequestListener<ResponseStartedEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
   addEventListener(
     type: 'sendheaders',
     listener: WebRequestListener<SendHeadersEvent>,
     options?: AddEventListenerOptions
-  ): void;
+  ): void
 
   /**
    * Removes a listener for a web request event.
@@ -72,56 +72,60 @@ export interface WebRequestInterceptor extends EventTarget {
     type: 'authrequired',
     listener: WebRequestListener<AuthRequiredEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'beforeredirect',
     listener: WebRequestListener<BeforeRedirectEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'beforerequest',
     listener: WebRequestListener<BeforeRequestEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'beforesendheaders',
     listener: WebRequestListener<BeforeSendHeadersEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'completed',
     listener: WebRequestListener<CompletedEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'erroroccurred',
     listener: WebRequestListener<ErrorOccurredEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'headersreceived',
     listener: WebRequestListener<HeadersReceivedEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'responsestarted',
     listener: WebRequestListener<ResponseStartedEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
   removeEventListener(
     type: 'sendheaders',
     listener: WebRequestListener<SendHeadersEvent>,
     options?: EventListenerOptions
-  ): void;
+  ): void
 }
 
 export interface RequestFilter {
-  urls: string[];
-  types?: chrome.webRequest.RequestFilter['types'];
+  urls: string[]
+  types?: chrome.webRequest.RequestFilter['types']
 }
+
+export type SsoRequestMessage =
+  | { type: 'ping' }
+  | { type: 'sso_request'; url: string }
 
 export type ExtensionMessage =
   | { type: 'pong' }
   | { type: 'success'; redirect_url: string }
   | { type: 'error'; message: string }
-  | { type: 'cancel' };
+  | { type: 'cancel' }

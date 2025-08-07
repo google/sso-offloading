@@ -3,19 +3,18 @@
  * It exports all the necessary functions, types, and error classes for consumers.
  */
 
-import type { ExtensionMessage } from './types';
+import type { ExtensionMessage, SsoRequestMessage } from './types'
 
 export {
-  SsoConnectorError,
+  SsoOffloadingConnectorError,
   ConfigurationError,
   CommunicationError,
-  InvalidResponseError,
-} from './errors';
+  UnsuccessfulResponseError
+} from './errors'
 
 export {
   createSsoOffloadingConnector,
-  createSsoOffloadingConnectorForChromeApp,
-  type SsoConnector,
-} from './sso_offloading_connector';
+  type SsoOffloadingConnector,
+} from './sso_offloading_connector'
 
-export { type ExtensionMessage };
+export { type ExtensionMessage, type SsoRequestMessage }
