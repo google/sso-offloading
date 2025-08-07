@@ -1,4 +1,4 @@
-import { createSsoOffloadingConnectorForChromeApp } from 'sso-offloading-connector';
+import { createSsoOffloadingConnector } from 'sso-offloading-connector';
 
 const ssoForm = document.getElementById('ssoForm');
 const extensionIdInput = document.getElementById('extensionId');
@@ -9,22 +9,21 @@ const enableSsoOffloadingButton = document.getElementById(
 const ssoWebview = document.getElementById('sso-webview');
 const statusContainer = document.getElementById('statusContainer');
 
+
 let ssoConnector = null;
+
 
 const handleSuccess = (url) => {
   statusContainer.className = 'success';
-  statusContainer.innerHTML = `✅ Success! The connector has redirected the webview.`;
+  statusContainer.innerHTML = `Success! The connector has redirected the webview to ${url}.`;
 };
 
 const handleError = (error) => {
   statusContainer.className = 'error';
-  const details = error.details
-    ? `<pre>${JSON.stringify(error.details, null, 2)}</pre>`
-    : '';
   statusContainer.innerHTML = `
-    <p><b>❌ SSO Error: ${error.name}</b></p>
-    <p>${error.message}</p>
-    ${details}
+    SSO Error: ${error.name},
+    ${error.message},
+    ${ error.details}
   `;
 };
 
@@ -37,25 +36,21 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
   statusContainer.className = 'info';
   statusContainer.textContent = 'Attempting to start SSO connector...';
 
-  try {
-    ssoConnector = createSsoOffloadingConnectorForChromeApp(
-      extensionId,
-      ssoWebview,
-      {
-        urls: [authUrl],
-      },
-      handleSuccess,
-      handleError
-    );
-    await ssoConnector.start();
-statusContainer.textContent =
-      '✅ Connector started. Navigating to auth URL to trigger interception...';
+  ssoConnector = createSsoOffloadingConnector(
+    extensionId,
+    ssoWebview,
+    {
+      urls: [authUrl],
+    },
+    handleSuccess,
+    handleError
+  );
+  await ssoConnector.start();
+  statusContainer.textContent =
+    'Connector started. Navigating to auth URL to trigger interception...';
 
-    const navigationUrl = authUrl.replace('/*', '/');
-    ssoWebview.src = navigationUrl;
-  } catch (error) {
-    handleError(error);
-  }
+  const navigationUrl = authUrl.replace('/*', '/');
+  ssoWebview.src = navigationUrl;
 };
 
 ssoForm.addEventListener('submit', (event) => {
