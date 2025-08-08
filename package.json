@@ -9,7 +9,9 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
-    "test": "vitest"
+    "test": "vitest",
+    "build:chrome-app": "pnpm --filter \"./examples/chrome-app-example\" build",
+    "build:iwa": "pnpm --filter \"./examples/simple-iwa-example\" build"
   },
   "repository": {
     "type": "git",

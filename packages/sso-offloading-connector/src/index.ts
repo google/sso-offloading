@@ -3,7 +3,11 @@
  * It exports all the necessary functions, types, and error classes for consumers.
  */
 
-import type { ExtensionMessage, SsoRequestMessage } from './types'
+import type {
+  ExtensionMessage,
+  SsoRequestMessage,
+  RequestFilter,
+} from './types'
 
 export {
   SsoOffloadingConnectorError,
@@ -17,4 +21,4 @@ export {
   type SsoOffloadingConnector,
 } from './sso_offloading_connector'
 
-export { type ExtensionMessage, type SsoRequestMessage }
+export { type ExtensionMessage, type SsoRequestMessage, type RequestFilter }
