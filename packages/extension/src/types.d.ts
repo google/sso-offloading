@@ -8,4 +8,4 @@ type ExtensionMessage =
   | { type: 'pong' }
   | { type: 'success'; redirect_url: string }
   | { type: 'error'; message: string }
-  | { type: 'cancel' };
+  | { type: 'cancel'; message: string }

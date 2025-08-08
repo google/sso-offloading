@@ -19,4 +19,17 @@ class UnauthorizedConnectionError extends Error {
   }
 }
 
-export { InvalidRequestError, TabCreationError, UnauthorizedConnectionError };
+/** User manually closed the auth tab. */
+class UserCanceledError extends Error {
+  constructor(message = 'User canceled the authentication flow.') {
+    super(message)
+    this.name = 'UserCanceledError'
+  }
+}
+
+export {
+  InvalidRequestError,
+  TabCreationError,
+  UnauthorizedConnectionError,
+  UserCanceledError,
+}

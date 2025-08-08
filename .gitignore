@@ -2,3 +2,4 @@ node_modules/
 build.sh
 examples/simple-iwa-example/certs
 dist*/
+examples/chrome-app-example/chrome-app
