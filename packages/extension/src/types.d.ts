@@ -14,6 +14,7 @@
  limitations under the License.
  */
 
+// Messages received from the IWA
 type SsoRequestMessage =
   | { type: 'ping' }
   | { type: 'sso_request'; url: string }
