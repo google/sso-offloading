@@ -37,7 +37,7 @@ On failure, the extension returns an error or cancel message. The connector invo
 
 ## Example Usage
 ```typescript
-import { createSsoOffloadingConnector, SsoOffloadingConnectorError } from './sso_offloading_connector';
+import { createSsoOffloadingConnector, SsoOffloadingConnectorError } from 'sso_offloading_connector';
 
 // Get a reference to the <cf> element
 const cfElement = document.getElementById('auth-cf'); // Can also be a WebView element.
@@ -80,7 +80,7 @@ npm run build
 # Build the Chrome App example
 npm run build:chrome-app
 
-# Build the Isolated Web App (IWA) example
+# Build the Isolated Web App (IWA) example (optional, .swbn can be downloaded from this repo, bundle id: yr57inu2f27fji2d2xd2lj7fjt3scdhby3bs7s4vdxh3rrujkdnaaaic, version 1.0.0)
 # Note: This may require a pre-generated key.
 npm run build:iwa
 ```
@@ -88,7 +88,7 @@ npm run build:iwa
 This project uses the [localExtensionHost](https://github.com/alex292/localExtensionHost/tree/main) tool to package and host locally the handler extension and Chrome App. Mentioned repository contains detailed instructions on this step, including how to force-install packaged projects for ChromeOS.
 
 3. Force - install IWA
-IWA bundle (`.swbn` file), as well as its `update_manifest.json` file, needs to be hosted and then force installed via [`IsolatedWebAppInstallForceList`](https://chromeenterprise.google/policies/#IsolatedWebAppInstallForceList) policy. 
+IWA bundle (`.swbn` file), as well as its `update_manifest.json` file, needs to be hosted and then the app has to be force-installed via [`IsolatedWebAppInstallForceList`](https://chromeenterprise.google/policies/#IsolatedWebAppInstallForceList) policy. 
 [Getting started with Isolated Web Apps](https://chromeos.dev/en/tutorials/getting-started-with-isolated-web-apps) article for reference.
 
 4. Test time!
