@@ -158,22 +158,4 @@ describe('SSO Handler', () => {
     })
     expect(mockChrome.tabs.remove).toHaveBeenCalledWith(mockTabId)
   })
-
-  it('should send an error if the request URL is invalid (missing redirect_uri)', async () => {
-    const invalidUrl = 'https://idp.com/auth'
-    handleExternalMessage(
-      { type: 'sso_request', url: invalidUrl },
-      trustedSender,
-      mockSendResponse
-    )
-    await vi.runAllTimersAsync()
-
-    expect(mockSendResponse).toHaveBeenCalledWith({
-      type: 'error',
-      message: "URL must have a 'redirect_uri' parameter.",
-    })
-
-    // Ensure no auth tab was created for the invalid request
-    expect(mockChrome.windows.create).not.toHaveBeenCalled()
-  })
 })

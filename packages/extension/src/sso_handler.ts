@@ -81,17 +81,16 @@ const waitForAuthRedirect = (
 async function processSsoFlow(
   flowId: string,
   url: string,
-  sendResponse: (response: ExtensionMessage) => void
+  sendResponse: (response: ExtensionMessage) => void,
+  senderOrigin: string
 ) {
   let authTabId: number | undefined
   let cleanupListeners = () => {}
 
   try {
     const ssoUrl = new URL(url)
-    const expectedRedirectUrl = ssoUrl.searchParams.get(REDIRECT_URI_PARAM)
-    if (!expectedRedirectUrl) {
-      throw new Error(`URL must have a '${REDIRECT_URI_PARAM}' parameter.`)
-    }
+    const expectedRedirectUrl =
+      ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
 
     authTabId = await getOrCreateAuthTab(ssoUrl)
     if (!authTabId) {
@@ -102,8 +101,11 @@ async function processSsoFlow(
       authTabId,
       expectedRedirectUrl
     )
+    // Save the cleanup function to ensure it runs in the `finally` block.
     cleanupListeners = cleanup
 
+    // Wait for the user to finish logging in, which resolves the promise
+    // and provides the final URL.
     const capturedUrl = await redirectPromise
     sendResponse({ type: 'success', redirect_url: capturedUrl })
   } catch (error: any) {
@@ -158,10 +160,11 @@ const handleExternalMessage = (
     return false
   }
 
+  // At this point, we know for sure that sender has a defined origin (checked in `isRequestValid`).
   const flowId = sender.origin!
   activeFlows.add(flowId)
-  
-  processSsoFlow(flowId, message.url, sendResponse)
+
+  processSsoFlow(flowId, message.url, sendResponse, sender.origin!)
 
   // Return true to indicate an async response will be sent.
   return true
