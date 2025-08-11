@@ -13,23 +13,17 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-import { defineConfig } from 'tsup';
-import pkg from './package.json';
-
-const libName = pkg.name;
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
+import dts from 'vite-plugin-dts';
 
 export default defineConfig({
-  entry: {
-    [libName]: 'src/sso_offloading_connector.ts',
+  build: {
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'SsoOffloadingConnector',
+      fileName: 'sso-offloading-connector',
+    },
   },
-  format: ['esm', 'cjs'],
-  outExtension({ format }) {
-    if (format === 'esm') return { js: `.js` };
-    if (format === 'cjs') return { js: `.umd.cjs` };
-    return { js: `.${format}.js` };
-  },
-  dts: true,
-  sourcemap: true,
-  clean: true,
-  outDir: 'dist',
+  plugins: [dts()],
 });
