@@ -1,13 +1,9 @@
-import { UserCanceledError } from './errors'
 import trustedClients from './trusted_clients.json'
 
 const REDIRECT_URI_PARAM = 'redirect_uri'
 const activeFlows = new Set<string>()
 
-/**
- * Finds the last focused window or creates a new one for the auth flow.
- * @returns The ID of the newly created tab.
- */
+// Finds the last focused window or creates a new one for the auth flow.
 const getOrCreateAuthTab = async (url: URL): Promise<number | undefined> => {
   const lastFocusedWindow = await chrome.windows.getLastFocused({
     windowTypes: ['normal'],
@@ -75,9 +71,6 @@ const waitForAuthRedirect = (
   return { redirectPromise, cleanup }
 }
 
-/**
- * Handles the entire SSO process for a given request.
- */
 async function processSsoFlow(
   flowId: string,
   url: string,
@@ -109,11 +102,7 @@ async function processSsoFlow(
     const capturedUrl = await redirectPromise
     sendResponse({ type: 'success', redirect_url: capturedUrl })
   } catch (error: any) {
-    if (error instanceof UserCanceledError) {
-      sendResponse({ type: 'cancel', message: error.message })
-    } else {
       sendResponse({ type: 'error', message: error.message })
-    }
   } finally {
     activeFlows.delete(flowId)
     cleanupListeners()
@@ -123,10 +112,7 @@ async function processSsoFlow(
   }
 }
 
-/**
- * Validates an incoming SSO request sender.
- */
-const isRequestValid = (
+const isSsoRequestValid = (
   sender: chrome.runtime.MessageSender,
   activeFlows: Set<string>
 ): boolean => {
@@ -141,7 +127,6 @@ const handleExternalMessage = (
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionMessage) => void
 ): boolean => {
-  // Handle the simple 'ping' request.
   if (message.type === 'ping') {
     sendResponse({ type: 'pong' })
     return false
@@ -152,7 +137,7 @@ const handleExternalMessage = (
     return false
   }
 
-  if (!isRequestValid(sender, activeFlows)) {
+  if (!isSsoRequestValid(sender, activeFlows)) {
     sendResponse({
       type: 'error',
       message: 'Request is invalid or a flow is already in progress.',

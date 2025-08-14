@@ -1,8 +1,8 @@
 {
     "id": "/",
-    "short_name": "IWA B",
+    "short_name": "IWA",
     "name": "Basic IWA Example",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "manifest_version": 3,
     "update_manifest_url": "https://narxnufay1lck8jc.public.blob.vercel-storage.com/update_manifest.json",
     "icons": [

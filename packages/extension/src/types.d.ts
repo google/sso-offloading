@@ -13,12 +13,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-// Messages received from the IWA
+
 type SsoRequestMessage =
   | { type: 'ping' }
   | { type: 'sso_request'; url: string };
 
-// Messages sent to the IWA
 type ExtensionMessage =
   | { type: 'pong' }
   | { type: 'success'; redirect_url: string }

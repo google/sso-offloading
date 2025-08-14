@@ -1,7 +1,8 @@
 {
   "manifest_version": 2,
   "name": "SSO Offloading Chrome App",
-  "version": "1.14",
+  "description": "Example Chrome App for SSO Offloading from WebView.",
+  "version": "1.35",
   "app": {
     "background": {
       "scripts": [
@@ -10,11 +11,7 @@
     }
   },
   "permissions": [
-    "tabs",
-    "webRequest",
-    "webview",
-    "webNavigation",
-    "storage"
+    "webview"
   ],
   "update_url": "http://127.0.0.1:8888/update_manifest.xml"
 }

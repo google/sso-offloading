@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+
 import { createSsoOffloadingConnector } from 'sso-offloading-connector';
 
 const ssoForm = document.getElementById('ssoForm');

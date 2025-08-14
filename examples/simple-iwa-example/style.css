@@ -1,9 +1,23 @@
+/**
+ * Copyright 2025 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+
 body {
-  font-family: Arial, Helvetica, sans-serif;
   margin: 0;
   padding: 2rem;
-  background-color: #f4f7f6;
-  color: #333;
   display: flex;
   height: 1000px;
   justify-content: center;
@@ -12,15 +26,15 @@ body {
 .container.sso {
   max-width: 800px;
   width: 100%;
-  background: #ffffff;
   padding: 2rem;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.ssoBody {
+  height: 1000px;
 }
 
 h1 {
-  color: #1a73e8;
-  border-bottom: 2px solid #e0e0e0;
   padding-bottom: 0.5rem;
   margin-top: 0;
 }
@@ -45,18 +59,15 @@ p {
   margin-bottom: 1rem;
   border: 1px solid #ccc;
   border-radius: 4px;
-  box-sizing: border-box; 
   font-size: 1rem;
 }
 
 input[type='text']:focus {
-  border-color: #1a73e8;
   outline: none;
   box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
 }
 
-button,
-input[type='submit'] {
+button, input[type='submit'] {
   background-color: #1a73e8;
   color: white;
   border: none;
@@ -68,8 +79,7 @@ input[type='submit'] {
   margin-right: 0.5rem;
 }
 
-button:hover,
-input[type='submit']:hover {
+button:hover, input[type='submit']:hover {
   background-color: #185abc;
 }
 
@@ -78,7 +88,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Form Validation Message */
 #form-validation-message {
   padding: 0.75rem;
   margin-bottom: 1rem;
@@ -86,48 +95,12 @@ button:disabled {
   color: #a50e0e;
   background-color: #fce8e6;
   border: 1px solid #ea4335;
-  display: none; /* Hidden by default */
-}
-
-#statusContainer {
-  margin-top: 1.5rem;
-  padding: 1rem;
-  border-width: 1px;
-  border-style: solid;
-  border-radius: 5px;
-  font-family: sans-serif;
-  word-wrap: break-word;
-}
-
-#statusContainer.success {
-  border-color: #34a853;
-  color: #1e8e3e;
-  background-color: #e6f4ea;
-}
-
-#statusContainer.error {
-  border-color: #ea4335;
-  color: #a50e0e;
-  background-color: #fce8e6;
-}
-
-#statusContainer.info {
-  border-color: #1a73e8;
-  color: #174ea6;
-  background-color: #e8f0fe;
-}
-
-#statusContainer pre {
-  background-color: #f1f1f1;
-  padding: 0.5rem;
-  border-radius: 4px;
-  white-space: pre-wrap; 
-  word-break: break-all;
+  display: none; 
 }
 
 #ssoCf {
   width: 100%;
-  height: 600px; 
+  height: 1000px; 
   border: 1px solid #ccc;
   border-radius: 4px;
   margin-top: 1.5rem;

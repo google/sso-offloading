@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+
 import { defineConfig } from 'vite';
 import fs from 'fs';
 import injectHTML from 'vite-plugin-html-inject';
@@ -71,7 +72,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: './src/index.html',
+        main: './index.html',
       },
     },
   },

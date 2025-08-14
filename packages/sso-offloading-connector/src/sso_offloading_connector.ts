@@ -78,7 +78,12 @@ const createRequestListener = (
 ): (() => void) => {
   // IWA
   if (target?.request?.createWebRequestInterceptor) {
-    const interceptor = target.request.createWebRequestInterceptor()
+    const interceptor = target.request.createWebRequestInterceptor({
+        urlPatterns: filter.urls,
+        resourceTypes: filter.types,
+        blocking: true,
+      }
+    )
     const interceptingListener = (e: any) => {
       e.preventDefault()
       handleInterceptedRequest(e.request)
@@ -170,7 +175,6 @@ export const createSsoOffloadingConnector = (
     chrome.runtime.sendMessage(extensionId, message, sendMessageCallback)
   }
 
-  // --- Public Interface ---
   return {
     start: async (timeoutMs = 3000) => {
       if (requestListener) {

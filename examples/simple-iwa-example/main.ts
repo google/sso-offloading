@@ -13,9 +13,9 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+
 import {
-  createSsoOffloadingConnector,
-  SsoOffloadingConnectorError,
+  createSsoOffloadingConnector
 } from 'sso-offloading-connector'
 import './style.css'
 
@@ -28,9 +28,6 @@ const enableSsoOffloadingButton = document.getElementById(
   'enableSsoOffloadingButton'
 ) as HTMLButtonElement
 const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement
-const statusContainer = document.getElementById(
-  'statusContainer'
-) as HTMLDivElement
 const formValidationMessage = document.getElementById(
   'form-validation-message'
 ) as HTMLDivElement
@@ -41,25 +38,12 @@ let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null
 
 const handleSuccess = (url: string) => {
   enableSsoOffloadingButton.disabled = true
-
-  if (statusContainer) {
-    statusContainer.className = 'success'
-    statusContainer.innerHTML = `SSO Success! The connector has redirected the frame.`
-  }
-
   ssoCf.src = url
+  console.log(`SSO Success: ${url}`)
 }
 
-const handleError = (error: SsoOffloadingConnectorError) => {
+const handleError = (error: any) => {
   console.error(`SSO Error: ${error.name} - ${error.message}`, error.details)
-  if (statusContainer) {
-    statusContainer.className = 'error'
-    statusContainer.innerHTML = `
-      SSO Error: ${error.name},
-      ${error.message},
-      ${error.details}
-    `
-  }
 }
 
 const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
@@ -68,11 +52,8 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
     ssoConnector = null
   }
 
-  if (statusContainer) {
-    statusContainer.innerHTML = 'Attempting to start SSO connector...'
-    statusContainer.className = 'info'
-  }
-
+  console.log('Attempting to start SSO connector...')
+  
   ssoConnector = createSsoOffloadingConnector(
     extensionId,
     ssoCf as any,
