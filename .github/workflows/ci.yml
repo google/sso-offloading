@@ -27,4 +27,11 @@ jobs:
       run: pnpm run build
     - name: Unit test
       run: pnpm run test
+    - name: Build IWA example
+      run: pnpm run build:iwa
+      env: 
+        KEY: ${{ secrets.IWA_KEY }}
+        KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+    - name: Build Chrome App example
+      run: pnpm run build:chrome-app
     
