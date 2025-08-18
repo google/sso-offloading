@@ -17,7 +17,7 @@
 import {
   CommunicationError,
   ConfigurationError,
-  UnsuccessfulResponseError,
+ ExtensionError,
   SsoOffloadingConnectorError,
 } from './errors'
 import type {
@@ -94,8 +94,9 @@ const createRequestListener = (
       resourceTypes: filter.types,
     })
 
-    return () =>
-      interceptor.removeEventListener('beforerequest', interceptingListener)
+    return () => {
+      interceptor.removeEventListener('beforerequest', interceptingListener);
+    }
   }
 
   // ChromeApp
@@ -111,8 +112,9 @@ const createRequestListener = (
       ['blocking']
     )
 
-    return () =>
-      target.request.onBeforeRequest.removeListener(interceptingListener)
+    return () => {
+      target.request.onBeforeRequest.removeListener(interceptingListener);
+    }
   }
 
   throw new ConfigurationError('Invalid target provided.')
@@ -148,10 +150,19 @@ export const createSsoOffloadingConnector = (
     }
 
   const handleInterceptedRequest = (details: { url: string }) => {
-    if (isRequestInFlight) return
+    const message: SsoRequestMessage = { type: 'sso_request', url: details.url }
+
+    if (isRequestInFlight) {
+      // If a flow is already active, send the request again. The extension's
+      // handler will see an active flow and focus the existing auth tab
+      // instead of creating a new one. We send this without a callback,
+      // as the original request is still waiting for the final response.
+      chrome.runtime.sendMessage(extensionId, message)
+      return
+    }
+
     isRequestInFlight = true
 
-    const message: SsoRequestMessage = { type: 'sso_request', url: details.url }
     const sendMessageCallback = (response: ExtensionMessage) => {
       isRequestInFlight = false
       if (!response) {
@@ -164,7 +175,7 @@ export const createSsoOffloadingConnector = (
         handleSuccess(response.redirect_url)
       } else if (response.type === 'error') {
         handleError(
-          new UnsuccessfulResponseError(
+          new ExtensionError(
             'Received error response from extension.',
             response.message
           )

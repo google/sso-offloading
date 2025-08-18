@@ -1,10 +1,12 @@
 import trustedClients from './trusted_clients.json'
 
 const REDIRECT_URI_PARAM = 'redirect_uri'
-const activeFlows = new Set<string>()
+const activeFlows = new Map<string, { tabId: number; windowId: number }>()
 
 // Finds the last focused window or creates a new one for the auth flow.
-const getOrCreateAuthTab = async (url: URL): Promise<number | undefined> => {
+const getOrCreateAuthTab = async (
+  url: URL
+): Promise<{ tabId: number; windowId: number } | undefined> => {
   const lastFocusedWindow = await chrome.windows.getLastFocused({
     windowTypes: ['normal'],
   })
@@ -17,7 +19,10 @@ const getOrCreateAuthTab = async (url: URL): Promise<number | undefined> => {
     })
     // Bring window to the front.
     await chrome.windows.update(lastFocusedWindow.id, { focused: true })
-    return newTab.id
+
+    if (newTab.id) {
+      return { tabId: newTab.id, windowId: lastFocusedWindow.id }
+    }
   }
 
   // Fallback: No suitable window was found, so create a new one.
@@ -26,8 +31,13 @@ const getOrCreateAuthTab = async (url: URL): Promise<number | undefined> => {
     type: 'normal',
     focused: true,
   })
-  return newWindow?.tabs?.[0]?.id
+  
+  const newTabId = newWindow?.tabs?.[0]?.id
+  if (newTabId && newWindow.id) {
+    return { tabId: newTabId, windowId: newWindow.id }
+  }
 }
+
 
 /**
  * Monitors a tab for a specific redirect URL or for the user closing the tab.
@@ -55,7 +65,7 @@ const waitForAuthRedirect = (
 
     onTabRemoveListener = (tabId: number) => {
       if (tabId === authTabId) {
-        reject(new UserCanceledError())
+        reject(new Error('User canceled the authentication flow.'))
       }
     }
 
@@ -85,10 +95,14 @@ async function processSsoFlow(
     const expectedRedirectUrl =
       ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
 
-    authTabId = await getOrCreateAuthTab(ssoUrl)
-    if (!authTabId) {
-      throw new Error('Failed to create a valid authentication tab.')
-    }
+const authInfo = await getOrCreateAuthTab(ssoUrl)  
+
+if (!authInfo) {
+  throw new Error('Failed to create a valid authentication tab.')
+}
+
+authTabId = authInfo.tabId 
+activeFlows.set(flowId, authInfo)
 
     const { redirectPromise, cleanup } = waitForAuthRedirect(
       authTabId,
@@ -101,11 +115,14 @@ async function processSsoFlow(
     // and provides the final URL.
     const capturedUrl = await redirectPromise
     sendResponse({ type: 'success', redirect_url: capturedUrl })
+    
   } catch (error: any) {
       sendResponse({ type: 'error', message: error.message })
+
   } finally {
     activeFlows.delete(flowId)
     cleanupListeners()
+
     if (authTabId) {
       chrome.tabs.remove(authTabId).catch(() => {})
     }
@@ -113,46 +130,54 @@ async function processSsoFlow(
 }
 
 const isSsoRequestValid = (
-  sender: chrome.runtime.MessageSender,
-  activeFlows: Set<string>
+  sender: chrome.runtime.MessageSender
 ): boolean => {
   const flowId = sender.origin
-
-  // The sender must have a trusted origin and not have a flow already active.
-  return !!flowId && flowId in trustedClients && !activeFlows.has(flowId)
+  return !!flowId && flowId in trustedClients 
 }
 
-const handleExternalMessage = (
+const handleExternalMessage = async (
   message: SsoRequestMessage,
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionMessage) => void
-): boolean => {
+): Promise<void> => {
   if (message.type === 'ping') {
     sendResponse({ type: 'pong' })
-    return false
+    return
   }
 
-  // Ignore any message that isn't a valid SSO request.
   if (message.type !== 'sso_request' || !message.url) {
-    return false
-  }
-
-  if (!isSsoRequestValid(sender, activeFlows)) {
     sendResponse({
       type: 'error',
-      message: 'Request is invalid or a flow is already in progress.',
+      message: 'Request is invalid',
     })
-    return false
+    return
   }
 
-  // At this point, we know for sure that sender has a defined origin (checked in `isRequestValid`).
+    if (!isSsoRequestValid(sender)) {
+      sendResponse({
+        type: 'error',
+        message: 'Request from an untrusted origin.',
+      })
+      return
+    }
+
+  // At this point, we know sender has an origin because `isSsoRequestValid` checks it.
   const flowId = sender.origin!
-  activeFlows.add(flowId)
 
+  // Check if a flow is already active for this origin.
+  if (activeFlows.has(flowId)) {
+    const existingFlow = activeFlows.get(flowId)!
+    // Focus the existing window and tab.
+    await chrome.windows.update(existingFlow.windowId, { focused: true })
+    await chrome.tabs.update(existingFlow.tabId, { active: true })
+
+    // Focusing on an already active flow expects the user to finish it.
+    return
+  }
+
+  // If no flow is active, start a new one.
   processSsoFlow(flowId, message.url, sendResponse, sender.origin!)
-
-  // Return true to indicate an async response will be sent.
-  return true
 }
 
 const initializeSsoHandler = (): void => {

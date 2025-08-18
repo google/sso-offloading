@@ -38,7 +38,6 @@ let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null
 
 const handleSuccess = (url: string) => {
   enableSsoOffloadingButton.disabled = true
-  ssoCf.src = url
   console.log(`SSO Success: ${url}`)
 }
 
@@ -88,7 +87,7 @@ enableSsoOffloadingButton.addEventListener('click', () => {
   const authUrl = authUrlInput.value
   if (extensionId && authUrl) {
     formValidationMessage.style.display = 'none'
-    setupSsoOffloading(extensionId, authUrl)
+     setupSsoOffloading(extensionId, authUrl)
   } else {
     formValidationMessage.textContent =
       'Please enter both Extension ID and Auth URL.'
