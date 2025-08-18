@@ -34,4 +34,5 @@ jobs:
         KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
     - name: Build Chrome App example
       run: pnpm run build:chrome-app
+
     
