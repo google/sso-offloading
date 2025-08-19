@@ -10,8 +10,8 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
     "test": "vitest",
-    "build:chrome-app": "pnpm --filter \"./examples/chrome-app-example\" build",
-    "build:iwa": "pnpm --filter \"./examples/simple-iwa-example\" build"
+    "build:chrome-app": "pnpm --filter \"./examples/chrome-app-example\" run build",
+    "build:iwa": "pnpm --filter \"./examples/simple-iwa-example\" run build"
   },
   "repository": {
     "type": "git",
