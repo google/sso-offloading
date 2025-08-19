@@ -11,26 +11,46 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
     - name: Setup PNPM
       uses: pnpm/action-setup@v3
       with:
         version: 8
+
     - name: Setup Node
       uses: actions/setup-node@v4
       with:
         node-version: 20
         cache: 'pnpm'
         cache-dependency-path: pnpm-lock.yaml
+
     - name: Install dependencies
       run: pnpm install
+
     - name: Build
       run: pnpm run build
+
     # - name: Unit test
       # run: pnpm run test
+
     - name: Build IWA example
       run: pnpm run build:iwa
       env: 
         KEY: ${{ secrets.IWA_KEY }}
         KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+
+    - name: Get IWA version
+      id: iwa_version
+      run: |
+        VERSION=$(jq -r .version examples/simple-iwa-example/public/.well-known/manifest.webmanifest)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload IWA Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
+        path: examples/simple-iwa-example/dist/iwa.swbn
+        overwrite: true
+
     - name: Build Chrome App example
       run: pnpm run build:chrome-app
