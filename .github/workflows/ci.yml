@@ -59,10 +59,10 @@ jobs:
       uses: browser-actions/setup-chrome@v1
 
     - name: Get Chrome App Version
-          id: chrome_app_version
-          run: |
-            VERSION=$(jq -r .version examples/chrome-app-example/manifest.json)
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+      id: chrome_app_version
+      run: |
+        VERSION=$(jq -r .version examples/chrome-app-example/manifest.json)
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Package Chrome App into .crx
       id: crx_chrome_app_package
