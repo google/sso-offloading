@@ -116,6 +116,7 @@ jobs:
           echo "CRX file not found at $EXPECTED_CRX_PATH"
           exit 1
         fi
+        
     - name: Upload SSO Offloading Extension .crx Artifact
       uses: actions/upload-artifact@v4
       with:

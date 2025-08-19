@@ -38,8 +38,7 @@ const handleError = (error) => {
   statusContainer.className = 'error';
   statusContainer.innerHTML = `
     SSO Error: ${error.name},
-    ${error.message},
-    ${ error.details}
+    ${error.message}
   `;
 };
 
@@ -62,11 +61,6 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
     handleError
   );
   await ssoConnector.start();
-  statusContainer.textContent =
-    'Connector started. Navigating to auth URL to trigger interception...';
-
-  const navigationUrl = authUrl.replace('/*', '/');
-  ssoWebview.src = navigationUrl;
 };
 
 ssoForm.addEventListener('submit', (event) => {

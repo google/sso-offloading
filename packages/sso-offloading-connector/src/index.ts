@@ -28,7 +28,7 @@ export {
   SsoOffloadingConnectorError,
   ConfigurationError,
   CommunicationError,
-  UnsuccessfulResponseError
+  ExtensionError
 } from './errors'
 
 export {
