@@ -43,6 +43,7 @@ jobs:
       id: iwa_version
       run: |
         VERSION=$(jq -r .version examples/simple-iwa-example/public/.well-known/manifest.webmanifest)
+        echo "IWA Version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Upload IWA Build Artifact
@@ -62,7 +63,7 @@ jobs:
       id: chrome_app_version
       run: |
         VERSION=$(jq -r .version examples/chrome-app-example/manifest.json)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Chrome App Version: $VERSION"
 
     - name: Package Chrome App into .crx
       id: crx_chrome_app_package
@@ -86,7 +87,7 @@ jobs:
     - name: Upload Chrome App .crx Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: chrome-app-build-${{ steps.app_version.outputs.version }}
+        name: chrome-app-build
         path: ${{ steps.crx_chrome_app_package.outputs.crx_name }}
         retention-days: 7
         overwrite: true
@@ -95,7 +96,7 @@ jobs:
       id: sso_offloading_extension_version
       run: |
         VERSION=$(jq -r .version packages/extension/package.json)
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "SSO Offloading Extension Version: $VERSION"
 
     - name: Package SSO Offloading Extension into .crx
       id: crx_extension_package
@@ -118,7 +119,7 @@ jobs:
     - name: Upload SSO Offloading Extension .crx Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
+        name: sso-offloading-extension
         path: ${{ steps.crx_extension_package.outputs.crx_name }}
         retention-days: 7
         overwrite: true
