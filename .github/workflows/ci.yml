@@ -64,14 +64,20 @@ jobs:
       run: |
         VERSION=$(jq -r .version examples/chrome-app-example/manifest.json)
         echo "Chrome App Version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Package Chrome App into .crx
+    - name: Package Chrome App into .crx and Get ID
       id: crx_chrome_app_package
       run: |
         echo "${{ secrets.CHROME_APP_KEY }}" > key.pem
         INPUT_DIR="examples/chrome-app-example/chrome-app"
 
-        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
+        PACK_OUTPUT=$(google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem 2>&1)
+        echo "$PACK_OUTPUT"
+        
+        APP_ID=$(echo "$PACK_OUTPUT" | grep -oP 'ID: \K[a-z]{32}')
+        echo "Chrome App ID: $APP_ID"
+        echo "app_id=$APP_ID" >> $GITHUB_OUTPUT
         
         EXPECTED_CRX_PATH="examples/chrome-app-example/chrome-app.crx"
 
@@ -95,16 +101,22 @@ jobs:
     - name: Get SSO Offloading Extension Version
       id: sso_offloading_extension_version
       run: |
-        VERSION=$(jq -r .version packages/extension/package.json)
+        VERSION=$(jq -r .version packages/extension/dist/manifest.json)
         echo "SSO Offloading Extension Version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Package SSO Offloading Extension into .crx
+    - name: Package SSO Offloading Extension into .crx and Get ID
       id: crx_extension_package
       run: |
         echo "${{ secrets.SSO_EXTENSION_KEY }}" > key.pem
         INPUT_DIR="packages/extension/dist"
 
-        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
+        PACK_OUTPUT=$(google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem 2>&1)
+        echo "$PACK_OUTPUT"
+
+        EXTENSION_ID=$(echo "$PACK_OUTPUT" | grep -oP 'ID: \K[a-z]{32}')
+        echo "SSO Offloading Extension ID: $EXTENSION_ID"
+        echo "extension_id=$EXTENSION_ID" >> $GITHUB_OUTPUT
         
         EXPECTED_CRX_PATH="packages/extension/dist.crx"
 
