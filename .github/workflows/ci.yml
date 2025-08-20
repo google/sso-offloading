@@ -45,7 +45,6 @@ jobs:
         VERSION=$(jq -r .version examples/simple-iwa-example/public/.well-known/manifest.webmanifest)
         echo "IWA Version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-
     - name: Upload IWA Build Artifact
       uses: actions/upload-artifact@v4
       with:
@@ -71,16 +70,14 @@ jobs:
       run: |
         echo "${{ secrets.CHROME_APP_KEY }}" > key.pem
         INPUT_DIR="examples/chrome-app-example/chrome-app"
+        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
 
-        PACK_OUTPUT=$(google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem 2>&1)
-        echo "$PACK_OUTPUT"
-        
-        APP_ID=$(echo "$PACK_OUTPUT" | grep -oP 'ID: \K[a-z]{32}')
+        # Calculate and print the Chrome App ID
+        APP_ID=$(openssl rsa -in key.pem -pubout -outform DER | sha256sum | head -c 32 | tr 0123456789abcdef abcdefghijklmnop)
         echo "Chrome App ID: $APP_ID"
         echo "app_id=$APP_ID" >> $GITHUB_OUTPUT
-        
-        EXPECTED_CRX_PATH="examples/chrome-app-example/chrome-app.crx"
 
+        EXPECTED_CRX_PATH="examples/chrome-app-example/chrome-app.crx"
         if [ -f "$EXPECTED_CRX_PATH" ]; then
           VERSIONED_CRX_NAME="chrome-app-${{ steps.chrome_app_version.outputs.version }}.crx"
           mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
@@ -89,7 +86,6 @@ jobs:
           echo "CRX file not found at $EXPECTED_CRX_PATH"
           exit 1
         fi
-
     - name: Upload Chrome App .crx Artifact
       uses: actions/upload-artifact@v4
       with:
@@ -110,16 +106,9 @@ jobs:
       run: |
         echo "${{ secrets.SSO_EXTENSION_KEY }}" > key.pem
         INPUT_DIR="packages/extension/dist"
-
-        PACK_OUTPUT=$(google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem 2>&1)
-        echo "$PACK_OUTPUT"
-
-        EXTENSION_ID=$(echo "$PACK_OUTPUT" | grep -oP 'ID: \K[a-z]{32}')
-        echo "SSO Offloading Extension ID: $EXTENSION_ID"
-        echo "extension_id=$EXTENSION_ID" >> $GITHUB_OUTPUT
+        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
         
         EXPECTED_CRX_PATH="packages/extension/dist.crx"
-
         if [ -f "$EXPECTED_CRX_PATH" ]; then
           VERSIONED_CRX_NAME="sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}.crx"
           mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
