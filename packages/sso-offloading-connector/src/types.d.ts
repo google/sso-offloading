@@ -22,6 +22,7 @@ export interface RequestFilter {
 export type SsoRequestMessage =
   | { type: 'ping' }
   | { type: 'sso_request'; url: string }
+  | { type: 'stop' }
 
 export type ExtensionMessage =
   | { type: 'pong' }

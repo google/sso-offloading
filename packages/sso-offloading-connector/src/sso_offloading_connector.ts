@@ -67,56 +67,76 @@ const pingExtension = (
   })
 }
 
-/**
- * Creates and attaches a request listener to the target view.
- * Returns a function that will detach the listener when called.
- */
+// Creates a request listener for an Isolated Web App's <cf>.
+// It returns a function that will detach the listener when called.
+const createIwaRequestListener = (
+  target: any,
+  filter: RequestFilter,
+  handleInterceptedRequest: (details: { url: string }) => void
+): (() => void) => {
+  const interceptor = target.request.createWebRequestInterceptor({
+    urlPatterns: filter.urls,
+    resourceTypes: filter.types,
+    blocking: true,
+  })
+  const interceptingListener = (e: any) => {
+    e.preventDefault()
+    handleInterceptedRequest(e.request)
+  }
+
+  interceptor.addEventListener('beforerequest', interceptingListener)
+
+  return () => {
+    interceptor.removeEventListener('beforerequest', interceptingListener)
+  }
+}
+
+// Creates a request listener for a Chrome App's <webview>.
+const createChromeAppRequestListener = (
+  target: any,
+  filter: RequestFilter,
+  handleInterceptedRequest: (details: { url: string }) => void
+): (() => void) => {
+  const interceptingListener = (details: { url: string }) => {
+    handleInterceptedRequest(details)
+    return { cancel: true }
+  }
+
+  target.request.onBeforeRequest.addListener(
+    interceptingListener,
+    { urls: filter.urls, types: filter.types },
+    ['blocking']
+  )
+
+  return () => {
+    target.request.onBeforeRequest.removeListener(interceptingListener)
+  }
+}
+
+// Detects the app type and creates the appropriate request listener.
+// It returns a function that will detach the listener when called.
 const createRequestListener = (
   target: any,
   filter: RequestFilter,
   handleInterceptedRequest: (details: { url: string }) => void
 ): (() => void) => {
-  // IWA
+  // IWA (<controlledframe>)
   if (target?.request?.createWebRequestInterceptor) {
-    const interceptor = target.request.createWebRequestInterceptor({
-      urlPatterns: filter.urls,
-      resourceTypes: filter.types,
-      blocking: true,
-    })
-    const interceptingListener = (e: any) => {
-      e.preventDefault()
-      handleInterceptedRequest(e.request)
-    }
-
-    interceptor.addEventListener('beforerequest', interceptingListener, {
-      urlPatterns: filter.urls,
-      resourceTypes: filter.types,
-    })
-
-    return () => {
-      interceptor.removeEventListener('beforerequest', interceptingListener)
-    }
+    return createIwaRequestListener(target, filter, handleInterceptedRequest)
   }
 
-  // ChromeApp
+  // Chrome App (<webview>)
   if (target?.request?.onBeforeRequest) {
-    const interceptingListener = (details: { url: string }) => {
-      handleInterceptedRequest(details)
-      return { cancel: true }
-    }
-
-    target.request.onBeforeRequest.addListener(
-      interceptingListener,
-      { urls: filter.urls, types: filter.types },
-      ['blocking']
+    return createChromeAppRequestListener(
+      target,
+      filter,
+      handleInterceptedRequest
     )
-
-    return () => {
-      target.request.onBeforeRequest.removeListener(interceptingListener)
-    }
   }
 
-  throw new ConfigurationError('Invalid target provided.')
+  throw new ConfigurationError(
+    'Invalid target provided. Must be a <controlledframe> or <webview> element.'
+  )
 }
 
 /**
@@ -138,7 +158,7 @@ export const createSsoOffloadingConnector = (
     types: requestFilter.types ?? ['main_frame'],
   }
   let isRequestInFlight = false
-  let requestListener: (() => void) | null = null
+  let detachListenerOnStop: (() => void) | null = null
 
   const handleSuccess =
     onSuccess ?? ((url) => console.log(`SSO Success: ${url}`))
@@ -169,16 +189,31 @@ export const createSsoOffloadingConnector = (
           new CommunicationError('Extension sent no response.')
         )
       }
-      if (response.type === 'success' && response.redirect_url) {
-        updateSource(response.redirect_url)
-        handleSuccess(response.redirect_url)
-      } else if (response.type === 'error') {
-        handleError(
-          new SsoOffloadingExtensionResponseError(
-            'Received error response from extension.',
-            response.message
+
+      switch (response.type) {
+        case 'success':
+          updateSource(response.redirect_url)
+          handleSuccess(response.redirect_url)
+          break
+        case 'error':
+          handleError(
+            new SsoOffloadingExtensionResponseError(
+              'Received error response from extension.',
+              response.message
+            )
           )
-        )
+          break
+        case 'cancel':
+          handleError(
+            new SsoOffloadingExtensionResponseError(
+              'SSO flow was canceled by the user.'
+            )
+          )
+          break
+        default:
+          handleError(
+            new CommunicationError('Received unexpected response from extension.')
+          )
       }
     }
 
@@ -187,14 +222,16 @@ export const createSsoOffloadingConnector = (
 
   return {
     start: async (timeoutMs = 3000) => {
-      if (requestListener) {
+      // If `detachListenerCleanup` is not null, then it was set by an already 
+      // active SSO offloading connector.
+      if (detachListenerOnStop) {
         return handleError(
           new ConfigurationError('Connector is already started.')
         )
       }
       try {
         await pingExtension(extensionId, timeoutMs)
-        requestListener = createRequestListener(
+        detachListenerOnStop = createRequestListener(
           target,
           finalFilter,
           handleInterceptedRequest
@@ -206,9 +243,13 @@ export const createSsoOffloadingConnector = (
     },
 
     stop: () => {
-      if (requestListener) {
-        requestListener()
-        requestListener = null
+      if (detachListenerOnStop) {
+        detachListenerOnStop()
+        // Tell the extension it should stop SSO flow.
+        chrome.runtime.sendMessage(extensionId, {
+          type: 'stop',
+        } as SsoRequestMessage)
+        detachListenerOnStop = null
       }
       isRequestInFlight = false
     },

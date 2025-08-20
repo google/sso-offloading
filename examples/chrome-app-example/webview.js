@@ -22,6 +22,9 @@ const authUrlInput = document.getElementById('authUrl');
 const enableSsoOffloadingButton = document.getElementById(
   'enableSsoOffloadingButton'
 );
+const stopSsoOffloadingButton = document.getElementById(
+  'stopSsoOffloadingButton'
+);
 const ssoWebview = document.getElementById('sso-webview');
 const statusContainer = document.getElementById('statusContainer');
 
@@ -61,12 +64,17 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
     handleError
   );
   await ssoConnector.start();
+
+  stopSsoOffloadingButton.disabled = false;
+  enableSsoOffloadingButton.disabled = true;
 };
 
 ssoForm.addEventListener('submit', (event) => {
   event.preventDefault();
+
   const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
+
   if (extensionId && authUrl) {
     setupSsoOffloading(extensionId, authUrl);
   } else {
@@ -75,9 +83,15 @@ ssoForm.addEventListener('submit', (event) => {
   }
 });
 
+stopSsoOffloadingButton.addEventListener('click', () => {
+  ssoConnector.stop();
+  ssoConnector = null;
+});
+
 function updateButtonState() {
   const isDisabled = !(extensionIdInput.value && authUrlInput.value);
   enableSsoOffloadingButton.disabled = isDisabled;
+  stopSsoOffloadingButton.disabled = !ssoConnector;
 }
 
 extensionIdInput.addEventListener('input', updateButtonState);

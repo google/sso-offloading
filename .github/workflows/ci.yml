@@ -108,6 +108,11 @@ jobs:
         INPUT_DIR="packages/extension/dist"
         google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
         
+        # Calculate and print the Extension ID
+        EXTENSION_ID=$(openssl rsa -in key.pem -pubout -outform DER | sha256sum | head -c 32 | tr 0123456789abcdef abcdefghijklmnop)
+        echo "SSO Offloading Extension ID: $EXTENSION_ID"
+        echo "extension_id=$EXTENSION_ID" >> $GITHUB_OUTPUT
+
         EXPECTED_CRX_PATH="packages/extension/dist.crx"
         if [ -f "$EXPECTED_CRX_PATH" ]; then
           VERSIONED_CRX_NAME="sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}.crx"

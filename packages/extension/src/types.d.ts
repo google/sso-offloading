@@ -16,7 +16,8 @@
 
 type SsoRequestMessage =
   | { type: 'ping' }
-  | { type: 'sso_request'; url: string };
+  | { type: 'sso_request'; url: string }
+  | { type: 'stop' };
 
 type ExtensionMessage =
   | { type: 'pong' }

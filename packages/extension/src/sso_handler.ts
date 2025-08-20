@@ -38,7 +38,6 @@ const getOrCreateAuthTab = async (
   }
 }
 
-
 /**
  * Monitors a tab for a specific redirect URL or for the user closing the tab.
  * This function sets up listeners and returns a Promise that acts as a signal.
@@ -95,14 +94,14 @@ async function processSsoFlow(
     const expectedRedirectUrl =
       ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
 
-const authInfo = await getOrCreateAuthTab(ssoUrl)  
+    const authInfo = await getOrCreateAuthTab(ssoUrl)  
+      
+    if (!authInfo) {
+      throw new Error('Failed to create a valid authentication tab.')
+    }
 
-if (!authInfo) {
-  throw new Error('Failed to create a valid authentication tab.')
-}
-
-authTabId = authInfo.tabId 
-activeFlows.set(flowId, authInfo)
+    authTabId = authInfo.tabId 
+    activeFlows.set(flowId, authInfo)
 
     const { redirectPromise, cleanup } = waitForAuthRedirect(
       authTabId,
@@ -117,8 +116,11 @@ activeFlows.set(flowId, authInfo)
     sendResponse({ type: 'success', redirect_url: capturedUrl })
     
   } catch (error: any) {
+    if (error.message.includes('User canceled')) {
+      sendResponse({ type: 'cancel', message: error.message })
+    } else {
       sendResponse({ type: 'error', message: error.message })
-
+    }
   } finally {
     activeFlows.delete(flowId)
     cleanupListeners()
@@ -141,6 +143,20 @@ const handleExternalMessage = async (
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionMessage) => void
 ): Promise<void> => {
+  if (message.type === 'stop') {
+    const flowId = sender.origin
+    if (flowId && activeFlows.has(flowId)) {
+      const flowToCancel = activeFlows.get(flowId)!
+      // This will trigger the onRemoved listener in the running `processSsoFlow`,
+      // which will cause its promise to reject and everything to clean up.
+      chrome.tabs.remove(flowToCancel.tabId).catch(() => {
+        // Ignore errors, tab might already be gone.
+      })
+      activeFlows.delete(flowId)
+    }
+    return 
+  }
+
   if (message.type === 'ping') {
     sendResponse({ type: 'pong' })
     return
