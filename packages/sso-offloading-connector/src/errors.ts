@@ -46,9 +46,9 @@ export class CommunicationError extends SsoOffloadingConnectorError {
 /**
  * Thrown when the extension provides a response that is not expected.
  */
-export class ExtensionError extends SsoOffloadingConnectorError {
+export class SsoOffloadingExtensionResponseError extends SsoOffloadingConnectorError {
   constructor(message: string, details?: any) {
     super(message, details)
-    this.name = 'UnsuccessfulResponseError'
+    this.name = 'SsoOffloadingExtensionResponseError'
   }
 }

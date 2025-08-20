@@ -17,7 +17,7 @@
 import {
   CommunicationError,
   ConfigurationError,
- ExtensionError,
+  SsoOffloadingExtensionResponseError,
   SsoOffloadingConnectorError,
 } from './errors'
 import type {
@@ -79,11 +79,10 @@ const createRequestListener = (
   // IWA
   if (target?.request?.createWebRequestInterceptor) {
     const interceptor = target.request.createWebRequestInterceptor({
-        urlPatterns: filter.urls,
-        resourceTypes: filter.types,
-        blocking: true,
-      }
-    )
+      urlPatterns: filter.urls,
+      resourceTypes: filter.types,
+      blocking: true,
+    })
     const interceptingListener = (e: any) => {
       e.preventDefault()
       handleInterceptedRequest(e.request)
@@ -95,7 +94,7 @@ const createRequestListener = (
     })
 
     return () => {
-      interceptor.removeEventListener('beforerequest', interceptingListener);
+      interceptor.removeEventListener('beforerequest', interceptingListener)
     }
   }
 
@@ -113,7 +112,7 @@ const createRequestListener = (
     )
 
     return () => {
-      target.request.onBeforeRequest.removeListener(interceptingListener);
+      target.request.onBeforeRequest.removeListener(interceptingListener)
     }
   }
 
@@ -145,9 +144,9 @@ export const createSsoOffloadingConnector = (
     onSuccess ?? ((url) => console.log(`SSO Success: ${url}`))
   const handleError = onError ?? ((err) => console.error(err.name, err.message))
 
-    const updateSource = (url: string) => {
-      target.src = url
-    }
+  const updateSource = (url: string) => {
+    target.src = url
+  }
 
   const handleInterceptedRequest = (details: { url: string }) => {
     const message: SsoRequestMessage = { type: 'sso_request', url: details.url }
@@ -175,12 +174,12 @@ export const createSsoOffloadingConnector = (
         handleSuccess(response.redirect_url)
       } else if (response.type === 'error') {
         handleError(
-          new ExtensionError(
+          new SsoOffloadingExtensionResponseError(
             'Received error response from extension.',
             response.message
           )
         )
-      } 
+      }
     }
 
     chrome.runtime.sendMessage(extensionId, message, sendMessageCallback)

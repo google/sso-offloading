@@ -18,7 +18,7 @@ import { createSsoOffloadingConnector } from '../sso_offloading_connector'
 import {
   CommunicationError,
   ConfigurationError,
-  UnsuccessfulResponseError,
+  SsoOffloadingExtensionResponseError,
 } from '../errors'
 
 const mockSendMessage = vi.fn()
@@ -101,7 +101,7 @@ describe('createSsoOffloadingConnector', () => {
     {
       scenario: 'an error response',
       response: { type: 'error', message: 'Auth failed' },
-      expectedError: UnsuccessfulResponseError,
+      expectedError: SsoOffloadingExtensionResponseError,
     },
     {
       scenario: 'no response',
