@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 
-#        https://www.apache.org/licenses/LICENSE-2.0
+#       https://www.apache.org/licenses/LICENSE-2.0
 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,101 +17,104 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ] # To be removed before merge to main
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  build-and-package:
+  build:
     runs-on: ubuntu-latest
-    steps: 
-      - name: Checkout
-        uses: actions/checkout@v4
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Setup PNPM
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8
 
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v3
-        with:
-          version: 8
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'pnpm'
+        cache-dependency-path: pnpm-lock.yaml
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
+    - name: Install dependencies
+      run: pnpm install
 
-      - name: Install dependencies
-        run: pnpm install
+    - name: Build
+      run: pnpm run build
 
-      - name: Build
-        run: pnpm run build
+    # - name: Unit test
+      # run: pnpm run test
+
+    - name: Build IWA example
+      run: pnpm run build:iwa
+      env: 
+        KEY: ${{ secrets.IWA_KEY }}
+        KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+
+    - name: Get IWA version
+      id: iwa_version
+      uses: ./.github/actions/get-version
+      with:
+        manifest-path: examples/simple-iwa-example/public/.well-known/manifest.webmanifest
         
-      - name: Build IWA example
-        run: pnpm run build:iwa
-        env: 
-          KEY: ${{ secrets.IWA_KEY }}
-          KEY_PASSPHSRQASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+    - name: Upload IWA Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
+        path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
+        overwrite: true
 
-      - name: Get IWA version
-        id: iwa_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: examples/simple-iwa-example/public/.well-known/manifest.webmanifest
-          
-      - name: Upload IWA Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
-          path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
-          overwrite: true
+    - name: Build Chrome App example
+      run: pnpm run build:chrome-app
 
-      - name: Build Chrome App example
-        run: pnpm run build:chrome-app
+    - name: Install Google Chrome
+      uses: browser-actions/setup-chrome@v1
 
-      - name: Install Google Chrome
-        uses: browser-actions/setup-chrome@v1
+    - name: Get Chrome App Version
+      id: chrome_app_version
+      uses: ./.github/actions/get-version
+      with:
+        manifest-path: examples/chrome-app-example/manifest.json
 
-      - name: Get Chrome App Version
-        id: chrome_app_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: examples/chrome-app-example/manifest.json
+    - name: Package Chrome App
+      id: package_chrome_app
+      uses: ./.github/actions/pack-crx
+      with:
+        key: ${{ secrets.CHROME_APP_KEY }}
+        input-dir: examples/chrome-app-example/chrome-app
+        version: ${{ steps.chrome_app_version.outputs.version }}
+        base-name: chrome-app
 
-      - name: Package Chrome App
-        id: package_chrome_app
-        uses: ./.github/actions/pack-crx
-        with:
-          key: ${{ secrets.CHROME_APP_KEY }}
-          input-dir: examples/chrome-app-example/chrome-app
-          version: ${{ steps.chrome_app_version.outputs.version }}
-          base-name: chrome-app
-
-      - name: Upload Chrome App .crx Artifact
-        uses: actions/upload-artifact@v4
-        with:
+    - name: Upload Chrome App .crx Artifact
+      uses: actions/upload-artifact@v4
+      with:
           name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
-          path: ${{ steps.package_chrome_app.outputs.crx-name }}
-          retention-days: 7
-          overwrite: true
+        path: ${{ steps.package_chrome_app.outputs.crx-name }}
+        retention-days: 7
+        overwrite: true
+
+    - name: Get SSO Offloading Extension Version
+      id: sso_offloading_extension_version
+      uses: ./.github/actions/get-version
+      with:
+        manifest-path: packages/extension/dist/manifest.json
+          
+    - name: Package SSO Offloading Extension
+      id: package_sso_extension
+      uses: ./.github/actions/pack-crx
+      with:
+        key: ${{ secrets.SSO_EXTENSION_KEY }}
+        input-dir: packages/extension/dist
+        version: ${{ steps.sso_offloading_extension_version.outputs.version }}
+        base-name: sso-offloading-extension
         
-      - name: Get SSO Offloading Extension Version
-        id: sso_offloading_extension_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: packages/extension/dist/manifest.json
-          
-      - name: Package SSO Offloading Extension
-        id: package_sso_extension
-        uses: ./.github/actions/pack-crx
-        with:
-          key: ${{ secrets.SSO_EXTENSION_KEY }}
-          input-dir: packages/extension/dist
-          version: ${{ steps.sso_offloading_extension_version.outputs.version }}
-          base-name: sso-offloading-extension
-          
-      - name: Upload SSO Offloading Extension .crx Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
-          path: ${{ steps.package_sso_extension.outputs.crx-name }}
-          retention-days: 7
-          overwrite: true
+    - name: Upload SSO Offloading Extension .crx Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
+        path: ${{ steps.package_sso_extension.outputs.crx-name }}
+        retention-days: 7
+        overwrite: true
