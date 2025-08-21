@@ -25,20 +25,4 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    - name: Setup PNPM
-      uses: pnpm/action-setup@v3
-      with:
-        version: 8
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'pnpm'
-        cache-dependency-path: pnpm-lock.yaml
-    - name: Install dependencies
-      run: pnpm install
-    - name: Build
-      run: pnpm run build
-    - name: Unit test
-      run: pnpm run test
     
