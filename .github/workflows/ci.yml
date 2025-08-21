@@ -21,39 +21,29 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-package:
     runs-on: ubuntu-latest
-    steps:
-      - name: Setup PNPM Environment
-        uses: ./.github/actions/setup-pnpm
+    steps: 
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install
 
       - name: Build
         run: pnpm run build
-
-      - name: Upload Workspace
-        uses: actions/upload-artifact@v4
-        with:
-          name: workspace
-          path: .
-
-  package-iwa:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: workspace
-          path: .
-          
-      - name: Setup PNPM Environment
-        uses: ./.github/actions/setup-pnpm
         
       - name: Build IWA example
         run: pnpm run build:iwa
@@ -73,22 +63,6 @@ jobs:
           name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
           path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
           overwrite: true
-
-  package-chrome-app:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: workspace
-          path: .
-          
-      - name: Setup PNPM Environment
-        uses: ./.github/actions/setup-pnpm
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
@@ -118,22 +92,6 @@ jobs:
           path: ${{ steps.package_chrome_app.outputs.crx-name }}
           retention-days: 7
           overwrite: true
-
-  package-extension:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download Workspace
-        uses: actions/download-artifact@v4
-        with:
-          name: workspace
-          path: .
-
-      - name: Install Google Chrome
-        uses: browser-actions/setup-chrome@v1
         
       - name: Get SSO Offloading Extension Version
         id: sso_offloading_extension_version
