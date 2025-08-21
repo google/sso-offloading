@@ -1,3 +1,19 @@
+/*
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */ 
+
 import trustedClients from './trusted_clients.json'
 
 const REDIRECT_URI_PARAM = 'redirect_uri'
@@ -31,7 +47,7 @@ const getOrCreateAuthTab = async (
     type: 'normal',
     focused: true,
   })
-  
+
   const newTabId = newWindow?.tabs?.[0]?.id
   if (newTabId && newWindow.id) {
     return { tabId: newTabId, windowId: newWindow.id }
@@ -94,13 +110,13 @@ async function processSsoFlow(
     const expectedRedirectUrl =
       ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
 
-    const authInfo = await getOrCreateAuthTab(ssoUrl)  
-      
+    const authInfo = await getOrCreateAuthTab(ssoUrl)
+
     if (!authInfo) {
       throw new Error('Failed to create a valid authentication tab.')
     }
 
-    authTabId = authInfo.tabId 
+    authTabId = authInfo.tabId
     activeFlows.set(flowId, authInfo)
 
     const { redirectPromise, cleanup } = waitForAuthRedirect(
@@ -114,7 +130,6 @@ async function processSsoFlow(
     // and provides the final URL.
     const capturedUrl = await redirectPromise
     sendResponse({ type: 'success', redirect_url: capturedUrl })
-    
   } catch (error: any) {
     if (error.message.includes('User canceled')) {
       sendResponse({ type: 'cancel', message: error.message })
@@ -131,11 +146,9 @@ async function processSsoFlow(
   }
 }
 
-const isSsoRequestValid = (
-  sender: chrome.runtime.MessageSender
-): boolean => {
+const isSsoRequestValid = (sender: chrome.runtime.MessageSender): boolean => {
   const flowId = sender.origin
-  return !!flowId && flowId in trustedClients 
+  return !!flowId && flowId in trustedClients
 }
 
 const handleExternalMessage = async (
@@ -154,7 +167,7 @@ const handleExternalMessage = async (
       })
       activeFlows.delete(flowId)
     }
-    return 
+    return
   }
 
   if (message.type === 'ping') {
@@ -170,13 +183,13 @@ const handleExternalMessage = async (
     return
   }
 
-    if (!isSsoRequestValid(sender)) {
-      sendResponse({
-        type: 'error',
-        message: 'Request from an untrusted origin.',
-      })
-      return
-    }
+  if (!isSsoRequestValid(sender)) {
+    sendResponse({
+      type: 'error',
+      message: 'Request from an untrusted origin.',
+    })
+    return
+  }
 
   // At this point, we know sender has an origin because `isSsoRequestValid` checks it.
   const flowId = sender.origin!
