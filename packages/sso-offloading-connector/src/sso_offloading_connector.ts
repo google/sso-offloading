@@ -120,6 +120,13 @@ const createRequestListener = (
   filter: RequestFilter,
   handleInterceptedRequest: (details: { url: string }) => void
 ): (() => void) => {
+  // The method for intercepting requests differs between Isolated Web Apps and
+  // Chrome Apps. IWAs use a `<controlledframe>` element, which provides the
+  // `createWebRequestInterceptor` API. In contrast, Chrome Apps use a `<webview>`
+  // element, which exposes a `webRequest`-style API (`onBeforeRequest`). This
+  // function detects the available API on the provided `target` and attaches
+  // the appropriate listener.
+
   // IWA (<controlledframe>)
   if (target?.request?.createWebRequestInterceptor) {
     return createIwaRequestListener(target, filter, handleInterceptedRequest)
