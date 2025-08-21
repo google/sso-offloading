@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Setup PNPM Environment
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-pnpm
 
       - name: Install dependencies
         run: pnpm install
@@ -53,7 +53,7 @@ jobs:
           path: .
           
       - name: Setup PNPM Environment
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-pnpm
         
       - name: Build IWA example
         run: pnpm run build:iwa
@@ -85,7 +85,7 @@ jobs:
           path: .
           
       - name: Setup PNPM Environment
-        uses: ./.github/actions/setup
+        uses: ./.github/actions/setup-pnpm
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
