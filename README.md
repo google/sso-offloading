@@ -108,3 +108,9 @@ IWA bundle (`.swbn` file), as well as its `update_manifest.json` file, needs to 
 [Getting started with Isolated Web Apps](https://chromeos.dev/en/tutorials/getting-started-with-isolated-web-apps) article for reference.
 
 4. Test time!
+
+
+
+This is not an officially supported Google product. This project is not
+eligible for the [Google Open Source Software Vulnerability Rewards
+Program](https://bughunters.google.com/open-source-security).
