@@ -91,7 +91,7 @@ jobs:
     - name: Upload Chrome App .crx Artifact
       uses: actions/upload-artifact@v4
       with:
-          name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
+        name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
         path: ${{ steps.package_chrome_app.outputs.crx-name }}
         retention-days: 7
         overwrite: true
