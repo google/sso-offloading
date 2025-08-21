@@ -25,7 +25,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+      
     - name: Setup PNPM
       uses: pnpm/action-setup@v3
       with:
@@ -145,3 +145,4 @@ jobs:
         path: ${{ steps.crx_extension_package.outputs.crx_name }}
         retention-days: 7
         overwrite: true
+
