@@ -1,17 +1,17 @@
-#  Copyright 2025 Google LLC
+# Copyright 2025 Google LLC
 
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 
-#       https://www.apache.org/licenses/LICENSE-2.0
+#       https://www.apache.org/licenses/LICENSE-2.0
 
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
- 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: CI
 on:
   push:
@@ -19,6 +19,7 @@ on:
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -80,32 +81,20 @@ jobs:
         echo "Chrome App Version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Package Chrome App into .crx and Get ID
-      id: crx_chrome_app_package
-      run: |
-        echo "${{ secrets.CHROME_APP_KEY }}" > key.pem
-        INPUT_DIR="examples/chrome-app-example/chrome-app"
-        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
+    - name: Package Chrome App
+      id: package_chrome_app
+      uses: ./.github/actions/pack-crx
+      with:
+        key: ${{ secrets.CHROME_APP_KEY }}
+        input-dir: examples/chrome-app-example/chrome-app
+        version: ${{ steps.chrome_app_version.outputs.version }}
+        base-name: chrome-app
 
-        # Calculate and print the Chrome App ID
-        APP_ID=$(openssl rsa -in key.pem -pubout -outform DER | sha256sum | head -c 32 | tr 0123456789abcdef abcdefghijklmnop)
-        echo "Chrome App ID: $APP_ID"
-        echo "app_id=$APP_ID" >> $GITHUB_OUTPUT
-
-        EXPECTED_CRX_PATH="examples/chrome-app-example/chrome-app.crx"
-        if [ -f "$EXPECTED_CRX_PATH" ]; then
-          VERSIONED_CRX_NAME="chrome-app-${{ steps.chrome_app_version.outputs.version }}.crx"
-          mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
-          echo "crx_name=$VERSIONED_CRX_NAME" >> $GITHUB_OUTPUT
-        else
-          echo "CRX file not found at $EXPECTED_CRX_PATH"
-          exit 1
-        fi
     - name: Upload Chrome App .crx Artifact
       uses: actions/upload-artifact@v4
       with:
         name: chrome-app-build
-        path: ${{ steps.crx_chrome_app_package.outputs.crx_name }}
+        path: ${{ steps.package_chrome_app.outputs.crx-name }}
         retention-days: 7
         overwrite: true
 
@@ -116,33 +105,19 @@ jobs:
         echo "SSO Offloading Extension Version: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-    - name: Package SSO Offloading Extension into .crx and Get ID
-      id: crx_extension_package
-      run: |
-        echo "${{ secrets.SSO_EXTENSION_KEY }}" > key.pem
-        INPUT_DIR="packages/extension/dist"
-        google-chrome --pack-extension=${INPUT_DIR} --pack-extension-key=key.pem
-        
-        # Calculate and print the Extension ID
-        EXTENSION_ID=$(openssl rsa -in key.pem -pubout -outform DER | sha256sum | head -c 32 | tr 0123456789abcdef abcdefghijklmnop)
-        echo "SSO Offloading Extension ID: $EXTENSION_ID"
-        echo "extension_id=$EXTENSION_ID" >> $GITHUB_OUTPUT
-
-        EXPECTED_CRX_PATH="packages/extension/dist.crx"
-        if [ -f "$EXPECTED_CRX_PATH" ]; then
-          VERSIONED_CRX_NAME="sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}.crx"
-          mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
-          echo "crx_name=$VERSIONED_CRX_NAME" >> $GITHUB_OUTPUT
-        else
-          echo "CRX file not found at $EXPECTED_CRX_PATH"
-          exit 1
-        fi
+    - name: Package SSO Offloading Extension
+      id: package_sso_extension
+      uses: ./.github/actions/pack-crx
+      with:
+        key: ${{ secrets.SSO_EXTENSION_KEY }}
+        input-dir: packages/extension/dist
+        version: ${{ steps.sso_offloading_extension_version.outputs.version }}
+        base-name: sso-offloading-extension
         
     - name: Upload SSO Offloading Extension .crx Artifact
       uses: actions/upload-artifact@v4
       with:
         name: sso-offloading-extension
-        path: ${{ steps.crx_extension_package.outputs.crx_name }}
+        path: ${{ steps.package_sso_extension.outputs.crx-name }}
         retention-days: 7
         overwrite: true
-
