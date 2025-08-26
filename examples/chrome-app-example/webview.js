@@ -31,12 +31,7 @@ const statusContainer = document.getElementById('statusContainer');
 let ssoConnector = null;
 
 
-const handleSuccess = (url) => {
-  statusContainer.className = 'success';
-  statusContainer.innerHTML = `Success! The connector has redirected the webview to ${url}.`;
-};
-
-const handleError = (error) => {
+const handleInterceptError = (error) => {
   statusContainer.className = 'error';
   statusContainer.innerHTML = `
     SSO Error: ${error.name},
@@ -59,10 +54,13 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
     {
       urls: [authUrl],
     },
-    handleSuccess,
-    handleError
+    handleInterceptError
   );
-  await ssoConnector.start();
+  
+  await ssoConnector.start().then(() => {
+    statusContainer.className = 'success';
+    statusContainer.textContent = 'SSO connector started successfully.';
+  });
 
   stopSsoOffloadingButton.disabled = false;
   enableSsoOffloadingButton.disabled = true;

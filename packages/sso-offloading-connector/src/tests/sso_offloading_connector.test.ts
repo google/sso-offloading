@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
+
 import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
 import { createSsoOffloadingConnector } from '../sso_offloading_connector'
 import {
@@ -22,6 +23,7 @@ import {
 } from '../errors'
 
 const mockSendMessage = vi.fn()
+
 vi.stubGlobal('chrome', {
   runtime: {
     sendMessage: mockSendMessage,
@@ -56,14 +58,14 @@ describe('createSsoOffloadingConnector', () => {
   })
 
   it('should handle the full lifecycle: start, intercept, and stop successfully', async () => {
-    mockSendMessage.mockImplementationOnce((_extId, msg, cb) =>
+    mockSendMessage.mockImplementationOnce((_extId, _msg, cb) =>
       cb({ type: 'pong' })
     )
+    
     const connector = createSsoOffloadingConnector(
       extensionId,
       mockControlledFrame,
       requestFilter,
-      onSuccess,
       onError
     )
     await connector.start()
@@ -90,7 +92,6 @@ describe('createSsoOffloadingConnector', () => {
       expect.any(Function)
     )
     expect(mockControlledFrame.src).toBe(newUrl)
-    expect(onSuccess).toHaveBeenCalledWith(newUrl)
     expect(onError).not.toHaveBeenCalled()
 
     connector.stop()
@@ -111,21 +112,20 @@ describe('createSsoOffloadingConnector', () => {
   ])(
     'should call onError when interception gets $scenario',
     async ({ response, expectedError }) => {
-      mockSendMessage.mockImplementationOnce((_extId, msg, cb) =>
+      mockSendMessage.mockImplementationOnce((_extId, _msg, cb) =>
         cb({ type: 'pong' })
       )
       const connector = createSsoOffloadingConnector(
         extensionId,
         mockControlledFrame,
         requestFilter,
-        onSuccess,
         onError
       )
       await connector.start()
 
       const interceptorListener = (mockInterceptor.addEventListener as Mock)
         .mock.calls[0][1]
-      mockSendMessage.mockImplementationOnce((_extId, msg, cb) => cb(response))
+      mockSendMessage.mockImplementationOnce((_extId, _msg, cb) => cb(response))
       interceptorListener({
         request: { url: 'any_url' },
         preventDefault: vi.fn(),
@@ -137,43 +137,28 @@ describe('createSsoOffloadingConnector', () => {
   )
 
   it('should fail to start if the extension does not respond to ping', async () => {
-    vi.useFakeTimers()
     const connector = createSsoOffloadingConnector(
       extensionId,
       mockControlledFrame,
       requestFilter,
-      onSuccess,
       onError
     )
 
-    const startPromise = connector.start()
-    vi.runAllTimers()
-
-    await expect(startPromise).rejects.toThrow(CommunicationError)
-    expect(onError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('timed out'),
-      })
-    )
-
-    vi.useRealTimers()
+        await expect(connector.start()).rejects.toThrow(CommunicationError)
   })
 
   it('should prevent starting if already started', async () => {
-    mockSendMessage.mockImplementation((_extId, msg, cb) =>
+    mockSendMessage.mockImplementation((_extId, _msg, cb) =>
       cb({ type: 'pong' })
     )
     const connector = createSsoOffloadingConnector(
       extensionId,
       mockControlledFrame,
       requestFilter,
-      onSuccess,
       onError
     )
-    await connector.start()
-    await connector.start() // Attempt to start again
 
-    expect(onError).toHaveBeenCalledWith(expect.any(ConfigurationError))
-    expect(onError).toHaveBeenCalledTimes(1)
+    await connector.start().catch(() => {})
+    await expect(connector.start()).rejects.toThrow(ConfigurationError)
   })
 })

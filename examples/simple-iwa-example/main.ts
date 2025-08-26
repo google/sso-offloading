@@ -34,13 +34,7 @@ const formValidationMessage = document.getElementById(
 
 let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null
 
-
-const handleSuccess = (url: string) => {
-  enableSsoOffloadingButton.disabled = true
-  console.log(`SSO Success: ${url}`)
-}
-
-const handleError = (error: any) => {
+const handleInterceptError = (error: any) => {
   console.error(`SSO Error: ${error.name} - ${error.message}`, error.details)
 }
 
@@ -58,8 +52,7 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
     {
       urls: [authUrl],
     },
-    handleSuccess,
-    handleError
+    handleInterceptError
   )
 
   await ssoConnector.start()

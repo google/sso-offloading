@@ -5,7 +5,7 @@
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
 
-      https://www.apache.org/licenses/LICENSE-2.0
+       https://www.apache.org/licenses/LICENSE-2.0
 
  Unless required by applicable law or agreed to in writing, software
  distributed under the License is distributed on an "AS IS" BASIS,
@@ -153,10 +153,14 @@ export const createSsoOffloadingConnector = (
   extensionId: string,
   target: any,
   requestFilter: RequestFilter,
-  onSuccess?: (url: string) => void,
-  onError?: (error: SsoOffloadingConnectorError) => void
+  onInterceptError: (error: SsoOffloadingConnectorError) => void
 ): SsoOffloadingConnector => {
-  if (!extensionId || !target || !requestFilter?.urls?.length) {
+  if (
+    !extensionId ||
+    !target ||
+    !requestFilter?.urls?.length ||
+    !onInterceptError
+  ) {
     throw new ConfigurationError('Invalid connector configuration provided.')
   }
 
@@ -166,10 +170,6 @@ export const createSsoOffloadingConnector = (
   }
   let isRequestInFlight = false
   let detachListenerOnStop: (() => void) | null = null
-
-  const handleSuccess =
-    onSuccess ?? ((url) => console.log(`SSO Success: ${url}`))
-  const handleError = onError ?? ((err) => console.error(err.name, err.message))
 
   const updateSource = (url: string) => {
     target.src = url
@@ -192,7 +192,7 @@ export const createSsoOffloadingConnector = (
     const sendMessageCallback = (response: ExtensionMessage) => {
       isRequestInFlight = false
       if (!response) {
-        return handleError(
+        return onInterceptError(
           new CommunicationError('Extension sent no response.')
         )
       }
@@ -200,10 +200,9 @@ export const createSsoOffloadingConnector = (
       switch (response.type) {
         case 'success':
           updateSource(response.redirect_url)
-          handleSuccess(response.redirect_url)
           break
         case 'error':
-          handleError(
+          onInterceptError(
             new SsoOffloadingExtensionResponseError(
               'Received error response from extension.',
               response.message
@@ -211,14 +210,14 @@ export const createSsoOffloadingConnector = (
           )
           break
         case 'cancel':
-          handleError(
+          onInterceptError(
             new SsoOffloadingExtensionResponseError(
               'SSO flow was canceled by the user.'
             )
           )
           break
         default:
-          handleError(
+          onInterceptError(
             new CommunicationError('Received unexpected response from extension.')
           )
       }
@@ -229,30 +228,24 @@ export const createSsoOffloadingConnector = (
 
   return {
     start: async (timeoutMs = 3000) => {
-      // If `detachListenerCleanup` is not null, then it was set by an already 
+      // If `detachListenerOnStop` is not null, then it was set by an already 
       // active SSO offloading connector.
       if (detachListenerOnStop) {
-        return handleError(
-          new ConfigurationError('Connector is already started.')
-        )
+        throw new ConfigurationError('Connector is already started.')
       }
-      try {
-        await pingExtension(extensionId, timeoutMs)
-        detachListenerOnStop = createRequestListener(
-          target,
-          finalFilter,
-          handleInterceptedRequest
-        )
-      } catch (error) {
-        handleError(error as SsoOffloadingConnectorError)
-        throw error
-      }
+
+      await pingExtension(extensionId, timeoutMs)
+      detachListenerOnStop = createRequestListener(
+        target,
+        finalFilter,
+        handleInterceptedRequest
+      )
     },
 
     stop: () => {
       if (detachListenerOnStop) {
         detachListenerOnStop()
-        // Tell the extension it should stop SSO flow.
+        // Tell the extension it should stop any unfinished SSO flow for this origin.
         chrome.runtime.sendMessage(extensionId, {
           type: 'stop',
         } as SsoRequestMessage)

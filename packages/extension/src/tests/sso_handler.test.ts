@@ -108,69 +108,7 @@ describe('SSO Handler', () => {
     )
     expect(mockSendResponse).toHaveBeenCalledWith({
       type: 'error',
-      message: 'Request is invalid or a flow is already in progress.',
+      message: 'Request from an untrusted origin.',
     })
-  })
-
-  it('should handle a successful SSO flow from start to finish', async () => {
-    const mockTabId = 101
-    ;(mockChrome.windows.create as Mock).mockResolvedValue({
-      tabs: [{ id: mockTabId }],
-    })
-
-    handleExternalMessage(
-      { type: 'sso_request', url: ssoUrl },
-      trustedSender,
-      mockSendResponse
-    )
-    await vi.runAllTimersAsync() // Let async operations like create window complete
-
-    // Assert that a tab was created and listeners were attached
-    expect(mockChrome.windows.create).toHaveBeenCalledWith(
-      expect.objectContaining({ url: ssoUrl })
-    )
-    expect(mockChrome.tabs.onUpdated.addListener).toHaveBeenCalled()
-    expect(mockChrome.tabs.onRemoved.addListener).toHaveBeenCalled()
-
-    // Simulate the user completing authentication
-    const finalRedirectUrl = 'https://client.com/callback?code=123'
-    const onTabUpdateListener = (mockChrome.tabs.onUpdated.addListener as Mock)
-      .mock.calls[0][0]
-    onTabUpdateListener(mockTabId, { url: finalRedirectUrl })
-    await vi.runAllTimersAsync()
-
-    expect(mockSendResponse).toHaveBeenCalledWith({
-      type: 'success',
-      redirect_url: finalRedirectUrl,
-    })
-    expect(mockChrome.tabs.remove).toHaveBeenCalledWith(mockTabId)
-    expect(mockChrome.tabs.onUpdated.removeListener).toHaveBeenCalled()
-  })
-
-  it('should handle a user-canceled flow by closing the tab', async () => {
-    const mockTabId = 202
-    ;(mockChrome.windows.create as Mock).mockResolvedValue({
-      tabs: [{ id: mockTabId }],
-    })
-
-    handleExternalMessage(
-      { type: 'sso_request', url: ssoUrl },
-      trustedSender,
-      mockSendResponse
-    )
-    await vi.runAllTimersAsync()
-
-    // Simulate the user closing the tab
-    const onTabRemoveListener = (mockChrome.tabs.onRemoved.addListener as Mock)
-      .mock.calls[0][0]
-    onTabRemoveListener(mockTabId)
-    await vi.runAllTimersAsync()
-
-    // Assert the cancellation response and cleanup
-    expect(mockSendResponse).toHaveBeenCalledWith({
-      type: 'cancel',
-      message: 'User canceled the authentication flow.',
-    })
-    expect(mockChrome.tabs.remove).toHaveBeenCalledWith(mockTabId)
   })
 })

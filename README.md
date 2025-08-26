@@ -41,12 +41,11 @@ This is a TypeScript module designed to be used within an **Isolated Web App** o
 
 ### How It Works ⚙️
 
-1.  **Creation:** Create a connector instance using the `createSsoOffloadingConnector` factory function. It requires the offloading extension's ID, a reference to the target view element (`<cf>` or `<webview>`), and URL filters. Optional parameters include `onSuccess` and `onError` callbacks that will be run by the conenctor.
+1.  **Creation:** Create a connector instance using the `createSsoOffloadingConnector` factory function. It requires the offloading extension's ID, a reference to the target view element (`<cf>` or `<webview>`), and URL filters. Optional parameters include `onInterceptError` callback that will be run by the conenctor when any error occurs during offloading flow.
 2.  **Handshake:** The `start()` method first "pings" the extension with a `ping` message to ensure it's installed and active before proceeding.
 3.  **Listening:** If the handshake is successful, it attaches a request listener to the target view element using the appropriate platform API.
 4.  **Interception & Delegation:** When a navigation request inside the view matches the URL filters, the connector cancels the request and sends the intercepted URL to the offloading extension in an `sso_request` message.
 5.  **Redirection:** The connector waits for the extension to send back a `success` message containing the final redirect URL. It then programmatically sets the view's `src` attribute to this new URL, completing the authentication flow within the application.
-On failure, the extension returns an error or cancel message. The connector invokes the optional `onError` callback, allowing the application to handle the failure gracefully (e.g., by displaying an error message).
 6.  **Cleanup:** The `stop()` method removes the event listener and ceases interception.
 
 ---
@@ -64,10 +63,7 @@ const requestFilter: RequestFilter = {
     urls: ['https://accounts.google.com/o/oauth2/v2/auth*','https://sso.mycompany.com/*'], // Intercept all requests to these domains.
 };
 
-const onSuccess = (): void => {
-  console.log("Yay! The SSO flow was offloaded.")
-}
-const onError = (error: SsoOffloadingConnectorError): void => {
+const onInterceptError = (error: SsoOffloadingConnectorError): void => {
   console.log("Error occured :(, "+ error.name +": "+ error.message);
 }
 
@@ -76,8 +72,7 @@ const ssoConnector = new SsoOffloadingConnector(
   SSO_EXTENSION_ID,
   cfElement,
   requestFilter,
-  onSuccess,
-  onError
+  onInterceptError
 );
 
 // Start offloading SSO calls for the cf.
