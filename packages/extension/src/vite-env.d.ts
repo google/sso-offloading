@@ -16,4 +16,4 @@
 
 /// <reference types="vite/client" />
 
-import '$types/types'
+import '$types/types';

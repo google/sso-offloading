@@ -14,89 +14,89 @@
  limitations under the License.
  */
 
-import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest'
-import { createSsoOffloadingConnector } from '../sso_offloading_connector'
+import { vi, describe, it, expect, beforeEach, type Mock } from 'vitest';
+import { createSsoOffloadingConnector } from '../sso_offloading_connector';
 import {
   CommunicationError,
   ConfigurationError,
   SsoOffloadingExtensionResponseError,
-} from '../errors'
+} from '../errors';
 
-const mockSendMessage = vi.fn()
+const mockSendMessage = vi.fn();
 
 vi.stubGlobal('chrome', {
   runtime: {
     sendMessage: mockSendMessage,
     lastError: undefined,
   },
-})
+});
 
 describe('createSsoOffloadingConnector', () => {
   const mockInterceptor = {
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
-  }
+  };
   const mockCreateWebRequestInterceptor = vi
     .fn()
-    .mockReturnValue(mockInterceptor)
+    .mockReturnValue(mockInterceptor);
 
-  let mockControlledFrame: any
-  const extensionId = 'test-extension-id'
-  const requestFilter = { urls: ['https://sso.example.com/*'] }
-  const onSuccess = vi.fn()
-  const onError = vi.fn()
+  let mockControlledFrame: any;
+  const extensionId = 'test-extension-id';
+  const requestFilter = { urls: ['https://sso.example.com/*'] };
+  const onSuccess = vi.fn();
+  const onError = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    chrome.runtime.lastError = undefined
+    vi.clearAllMocks();
+    chrome.runtime.lastError = undefined;
     mockControlledFrame = {
       src: '',
       request: {
         createWebRequestInterceptor: mockCreateWebRequestInterceptor,
       },
-    }
-  })
+    };
+  });
 
   it('should handle the full lifecycle: start, intercept, and stop successfully', async () => {
     mockSendMessage.mockImplementationOnce((_extId, _msg, cb) =>
       cb({ type: 'pong' })
-    )
-    
+    );
+
     const connector = createSsoOffloadingConnector(
       extensionId,
       mockControlledFrame,
       requestFilter,
       onError
-    )
-    await connector.start()
+    );
+    await connector.start();
 
-    const newUrl = 'https://myapp.com/callback'
-    const interceptedUrl = 'https://sso.example.com/login'
+    const newUrl = 'https://myapp.com/callback';
+    const interceptedUrl = 'https://sso.example.com/login';
     const interceptorListener = (mockInterceptor.addEventListener as Mock).mock
-      .calls[0][1]
+      .calls[0][1];
 
     mockSendMessage.mockImplementationOnce((_extId, msg, cb) => {
       if (msg.type === 'sso_request') {
-        cb({ type: 'success', redirect_url: newUrl })
+        cb({ type: 'success', redirect_url: newUrl });
       }
-    })
+    });
 
     interceptorListener({
       request: { url: interceptedUrl },
       preventDefault: vi.fn(),
-    })
+    });
 
     expect(mockSendMessage).toHaveBeenCalledWith(
       extensionId,
       { type: 'sso_request', url: interceptedUrl },
       expect.any(Function)
-    )
-    expect(mockControlledFrame.src).toBe(newUrl)
-    expect(onError).not.toHaveBeenCalled()
+    );
+    expect(mockControlledFrame.src).toBe(newUrl);
+    expect(onError).not.toHaveBeenCalled();
 
-    connector.stop()
-    expect(mockInterceptor.removeEventListener).toHaveBeenCalled()
-  })
+    connector.stop();
+    expect(mockInterceptor.removeEventListener).toHaveBeenCalled();
+  });
 
   it.each([
     {
@@ -114,27 +114,29 @@ describe('createSsoOffloadingConnector', () => {
     async ({ response, expectedError }) => {
       mockSendMessage.mockImplementationOnce((_extId, _msg, cb) =>
         cb({ type: 'pong' })
-      )
+      );
       const connector = createSsoOffloadingConnector(
         extensionId,
         mockControlledFrame,
         requestFilter,
         onError
-      )
-      await connector.start()
+      );
+      await connector.start();
 
       const interceptorListener = (mockInterceptor.addEventListener as Mock)
-        .mock.calls[0][1]
-      mockSendMessage.mockImplementationOnce((_extId, _msg, cb) => cb(response))
+        .mock.calls[0][1];
+      mockSendMessage.mockImplementationOnce((_extId, _msg, cb) =>
+        cb(response)
+      );
       interceptorListener({
         request: { url: 'any_url' },
         preventDefault: vi.fn(),
-      })
+      });
 
-      expect(onError).toHaveBeenCalledWith(expect.any(expectedError))
-      expect(onSuccess).not.toHaveBeenCalled()
+      expect(onError).toHaveBeenCalledWith(expect.any(expectedError));
+      expect(onSuccess).not.toHaveBeenCalled();
     }
-  )
+  );
 
   it('should fail to start if the extension does not respond to ping', async () => {
     const connector = createSsoOffloadingConnector(
@@ -142,23 +144,23 @@ describe('createSsoOffloadingConnector', () => {
       mockControlledFrame,
       requestFilter,
       onError
-    )
+    );
 
-        await expect(connector.start()).rejects.toThrow(CommunicationError)
-  })
+    await expect(connector.start()).rejects.toThrow(CommunicationError);
+  });
 
   it('should prevent starting if already started', async () => {
     mockSendMessage.mockImplementation((_extId, _msg, cb) =>
       cb({ type: 'pong' })
-    )
+    );
     const connector = createSsoOffloadingConnector(
       extensionId,
       mockControlledFrame,
       requestFilter,
       onError
-    )
+    );
 
-    await connector.start().catch(() => {})
-    await expect(connector.start()).rejects.toThrow(ConfigurationError)
-  })
-})
+    await connector.start().catch(() => {});
+    await expect(connector.start()).rejects.toThrow(ConfigurationError);
+  });
+});

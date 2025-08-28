@@ -14,12 +14,12 @@
  limitations under the License.
  */
 export class SsoOffloadingConnectorError extends Error {
-  public readonly details?: any
+  public readonly details?: any;
 
   constructor(message: string, details?: any) {
-    super(message)
-    this.name = 'SsoOffloadingConnectorError'
-    this.details = details
+    super(message);
+    this.name = 'SsoOffloadingConnectorError';
+    this.details = details;
   }
 }
 
@@ -28,8 +28,8 @@ export class SsoOffloadingConnectorError extends Error {
  */
 export class ConfigurationError extends SsoOffloadingConnectorError {
   constructor(message: string) {
-    super(message)
-    this.name = 'ConfigurationError'
+    super(message);
+    this.name = 'ConfigurationError';
   }
 }
 
@@ -38,8 +38,8 @@ export class ConfigurationError extends SsoOffloadingConnectorError {
  */
 export class CommunicationError extends SsoOffloadingConnectorError {
   constructor(message: string, details?: any) {
-    super(message, details)
-    this.name = 'CommunicationError'
+    super(message, details);
+    this.name = 'CommunicationError';
   }
 }
 
@@ -48,7 +48,7 @@ export class CommunicationError extends SsoOffloadingConnectorError {
  */
 export class SsoOffloadingExtensionResponseError extends SsoOffloadingConnectorError {
   constructor(message: string, details?: any) {
-    super(message, details)
-    this.name = 'SsoOffloadingExtensionResponseError'
+    super(message, details);
+    this.name = 'SsoOffloadingExtensionResponseError';
   }
 }

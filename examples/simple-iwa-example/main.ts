@@ -13,39 +13,36 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-import {
-  createSsoOffloadingConnector
-} from 'sso-offloading-connector'
-import './style.css'
+import { createSsoOffloadingConnector } from 'sso-offloading-connector';
+import './style.css';
 
-const ssoForm = document.getElementById('ssoForm') as HTMLFormElement
+const ssoForm = document.getElementById('ssoForm') as HTMLFormElement;
 const extensionIdInput = document.getElementById(
   'extensionId'
-) as HTMLInputElement
-const authUrlInput = document.getElementById('authUrl') as HTMLInputElement
+) as HTMLInputElement;
+const authUrlInput = document.getElementById('authUrl') as HTMLInputElement;
 const enableSsoOffloadingButton = document.getElementById(
   'enableSsoOffloadingButton'
-) as HTMLButtonElement
-const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement
+) as HTMLButtonElement;
+const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement;
 const formValidationMessage = document.getElementById(
   'form-validation-message'
-) as HTMLDivElement
+) as HTMLDivElement;
 
-
-let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null
+let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null;
 
 const handleInterceptError = (error: any) => {
-  console.error(`SSO Error: ${error.name} - ${error.message}`, error.details)
-}
+  console.error(`SSO Error: ${error.name} - ${error.message}`, error.details);
+};
 
 const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
   if (ssoConnector) {
-    ssoConnector.stop()
-    ssoConnector = null
+    ssoConnector.stop();
+    ssoConnector = null;
   }
 
-  console.log('Attempting to start SSO connector...')
-  
+  console.log('Attempting to start SSO connector...');
+
   ssoConnector = createSsoOffloadingConnector(
     extensionId,
     ssoCf as any,
@@ -53,41 +50,41 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
       urls: [authUrl],
     },
     handleInterceptError
-  )
+  );
 
-  await ssoConnector.start()
-}
+  await ssoConnector.start();
+};
 
 ssoForm.addEventListener('submit', (event) => {
-  event.preventDefault()
-  const extensionId = extensionIdInput.value
-  const authUrl = authUrlInput.value
-  enableSsoOffloadingButton.disabled = !(extensionId && authUrl)
-})
+  event.preventDefault();
+  const extensionId = extensionIdInput.value;
+  const authUrl = authUrlInput.value;
+  enableSsoOffloadingButton.disabled = !(extensionId && authUrl);
+});
 
 const hideValidationMessage = () => {
   if (formValidationMessage.style.display !== 'none') {
-    formValidationMessage.style.display = 'none'
+    formValidationMessage.style.display = 'none';
   }
-}
+};
 
-extensionIdInput.addEventListener('input', hideValidationMessage)
-authUrlInput.addEventListener('input', hideValidationMessage)
+extensionIdInput.addEventListener('input', hideValidationMessage);
+authUrlInput.addEventListener('input', hideValidationMessage);
 
 enableSsoOffloadingButton.addEventListener('click', () => {
-  const extensionId = extensionIdInput.value
-  const authUrl = authUrlInput.value
+  const extensionId = extensionIdInput.value;
+  const authUrl = authUrlInput.value;
   if (extensionId && authUrl) {
-    formValidationMessage.style.display = 'none'
-     setupSsoOffloading(extensionId, authUrl)
+    formValidationMessage.style.display = 'none';
+    setupSsoOffloading(extensionId, authUrl);
   } else {
     formValidationMessage.textContent =
-      'Please enter both Extension ID and Auth URL.'
-    formValidationMessage.style.display = 'block'
+      'Please enter both Extension ID and Auth URL.';
+    formValidationMessage.style.display = 'block';
   }
-})
+});
 
 // Initial check to enable button if values are present on load
 if (extensionIdInput?.value && authUrlInput?.value) {
-  enableSsoOffloadingButton.disabled = false
+  enableSsoOffloadingButton.disabled = false;
 }

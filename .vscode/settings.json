@@ -10,5 +10,7 @@
   // Run ESLint to fix issues on save
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
-    }
+    },
+    "prettier.prettierPath": "./node_modules/prettier",
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }

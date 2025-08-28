@@ -22,18 +22,18 @@ import type {
   ExtensionMessage,
   SsoRequestMessage,
   RequestFilter,
-} from './types'
+} from './types';
 
 export {
   SsoOffloadingConnectorError,
   ConfigurationError,
   CommunicationError,
   SsoOffloadingExtensionResponseError,
-} from './errors'
+} from './errors';
 
 export {
   createSsoOffloadingConnector,
   type SsoOffloadingConnector,
-} from './sso_offloading_connector'
+} from './sso_offloading_connector';
 
-export { type ExtensionMessage, type SsoRequestMessage, type RequestFilter }
+export { type ExtensionMessage, type SsoRequestMessage, type RequestFilter };

@@ -13,21 +13,13 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-import {
-  vi,
-  type Mock,
-  describe,
-  it,
-  expect,
-  beforeEach,
-} from 'vitest'
-
+import { vi, type Mock, describe, it, expect, beforeEach } from 'vitest';
 
 const createMockChromeEvent = () => ({
   addListener: vi.fn(),
   removeListener: vi.fn(),
   hasListener: vi.fn().mockReturnValue(false),
-})
+});
 
 const mockChrome = {
   windows: {
@@ -44,52 +36,53 @@ const mockChrome = {
     onRemoved: createMockChromeEvent(),
     onUpdated: createMockChromeEvent(),
   },
-}
-vi.stubGlobal('chrome', mockChrome)
+};
+vi.stubGlobal('chrome', mockChrome);
 
 vi.mock('../trusted_clients.json', () => ({
   default: {
-    'https://trusted.app.com': {}, 
+    'https://trusted.app.com': {},
   },
-}))
+}));
 
 describe('SSO Handler', () => {
   let handleExternalMessage: (
     message: SsoRequestMessage,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response: ExtensionMessage) => void
-  ) => boolean
-  let mockSendResponse: Mock
+  ) => boolean;
+  let mockSendResponse: Mock;
 
   const trustedSender: chrome.runtime.MessageSender = {
     origin: 'https://trusted.app.com',
-  }
-  const ssoUrl = 'https://idp.com/auth?redirect_uri=https://client.com/callback'
+  };
+  const ssoUrl =
+    'https://idp.com/auth?redirect_uri=https://client.com/callback';
 
   beforeEach(async () => {
-    vi.resetModules()
-    vi.clearAllMocks()
-    vi.useFakeTimers()
+    vi.resetModules();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
 
     // Dynamically import the handler to get a fresh instance with mocks applied
-    const module = await import('../sso_handler')
-    module.default() // This is initializeSsoHandler()
+    const module = await import('../sso_handler');
+    module.default(); // This is initializeSsoHandler()
 
     // Get the dynamically added listener function
     handleExternalMessage = (
       mockChrome.runtime.onMessageExternal.addListener as Mock
-    ).mock.calls[0][0]
-    mockSendResponse = vi.fn()
-  })
+    ).mock.calls[0][0];
+    mockSendResponse = vi.fn();
+  });
 
   it('should initialize correctly and respond to ping requests', () => {
     expect(
       mockChrome.runtime.onMessageExternal.addListener
-    ).toHaveBeenCalledTimes(2)
+    ).toHaveBeenCalledTimes(2);
 
-    handleExternalMessage({ type: 'ping' }, trustedSender, mockSendResponse)
-    expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' })
-  })
+    handleExternalMessage({ type: 'ping' }, trustedSender, mockSendResponse);
+    expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
+  });
 
   it.each([
     {
@@ -105,10 +98,10 @@ describe('SSO Handler', () => {
       { type: 'sso_request', url: ssoUrl },
       sender,
       mockSendResponse
-    )
+    );
     expect(mockSendResponse).toHaveBeenCalledWith({
       type: 'error',
       message: 'Request from an untrusted origin.',
-    })
-  })
-})
+    });
+  });
+});

@@ -13,11 +13,11 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-chrome.app.runtime.onLaunched.addListener(function() {
+chrome.app.runtime.onLaunched.addListener(function () {
   chrome.app.window.create('index.html', {
-    'bounds': {
-      'width': 800,
-      'height': 600,
-    }
+    bounds: {
+      width: 800,
+      height: 600,
+    },
   });
 });

@@ -18,11 +18,15 @@
     }
   },
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "vitest"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.326",
     "tsup": "^8.5.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vite": "^7.1.3"
   }
 }

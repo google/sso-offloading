@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <!--
  Copyright 2025 Google LLC
 
@@ -16,37 +16,48 @@
 -->
 
 <html>
-
-<head>
+  <head>
     <title>SSO Offloading Chrome App</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-<body >
+  <body>
     <h1>SSO Offloading Connector - Chrome App Demo</h1>
 
     <form id="ssoForm">
-        <div class="form-group">
-            <label for="extensionId">SSO Handler Extension ID:</label>
-            <input type="text" id="extensionId" value="jmdcfpeebneidlbnldlhcifibpkidhkn">
-        </div>
-        <div class="form-group">
-            <label for="authUrl">Auth URL Pattern:</label>
-            <input type="text" id="authUrl" value="https://accounts.google.com/o/oauth2/v2/auth*">
-        </div>
-        <button type="submit" id="enableSsoOffloadingButton">Start Connector</button>
-        <button id="stopSsoOffloadingButton" disabled>Stop Connector</button>"
+      <div class="form-group">
+        <label for="extensionId">SSO Handler Extension ID:</label>
+        <input
+          type="text"
+          id="extensionId"
+          value="jmdcfpeebneidlbnldlhcifibpkidhkn"
+        />
+      </div>
+      <div class="form-group">
+        <label for="authUrl">Auth URL Pattern:</label>
+        <input
+          type="text"
+          id="authUrl"
+          value="https://accounts.google.com/o/oauth2/v2/auth*"
+        />
+      </div>
+      <button type="submit" id="enableSsoOffloadingButton">
+        Start Connector
+      </button>
+      <button id="stopSsoOffloadingButton" disabled>Stop Connector</button>"
     </form>
 
     <div id="statusContainer">
-        <p>Enter your extension details and click "Start Connector".</p>
+      <p>Enter your extension details and click "Start Connector".</p>
     </div>
 
-    <webview id="sso-webview" style="height: 1000px" src="https://developers.google.com/oauthplayground/#step1&apisSelect=openid&url=https%3A%2F%2F&content_type=application%2Fjson&http_method=GET&useDefaultOauthCred=unchecked&oauthEndpointSelect=Google&oauthAuthEndpointValue=https%3A%2F%2Faccounts.google.com%2Fo%2Foauth2%2Fv2%2Fauth&oauthTokenEndpointValue=https%3A%2F%2Foauth2.googleapis.com%2Ftoken&includeCredentials=unchecked&accessTokenType=bearer&autoRefreshToken=unchecked&accessType=offline&prompt=none&response_type=code&wrapLines=on">
+    <webview
+      id="sso-webview"
+      style="height: 1000px"
+      src="https://developers.google.com/oauthplayground/#step1&apisSelect=openid&response_type=code"
+    >
     </webview>
 
     <script src="/webview.js"></script>
-
-</body>
-
+  </body>
 </html>

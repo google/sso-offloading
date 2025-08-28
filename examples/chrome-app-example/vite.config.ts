@@ -42,7 +42,7 @@ export default defineConfig({
     }),
   ],
   // This alias ensures that `import 'sso-offloading-connector'` correctly
-  // resolves to the source code within monorepo during the build. 
+  // resolves to the source code within monorepo during the build.
   resolve: {
     alias: {
       'sso-offloading-connector': resolve(

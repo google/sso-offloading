@@ -13,5 +13,5 @@
   "permissions": [
     "webview"
   ],
-  "update_url": "http://127.0.0.1:8888/update_manifest.xml"
+  "update_url": "<url-to-be-specified>"
 }

@@ -16,6 +16,7 @@
   "background": {
     "service_worker": "service_worker.js"
   },
+      "_comment": "the ID below belongs to Chrome App Example, which is available here: <url-to-be-specified>. No restrictions regarding isolated-app:// are specified below as they were replaced by `trusted_clients.json` check.",
   "externally_connectable": {
     "ids": [
       "abaaiopbfcagdjfghfmbiifjolfnlagf"
@@ -23,6 +24,5 @@
     "matches": [
       "isolated-app://*/*"
     ]
-  },
-  "update_url": "http://127.0.0.1:8888/update_manifest.xml"
+  }
 }

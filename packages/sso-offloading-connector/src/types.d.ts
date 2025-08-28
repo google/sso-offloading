@@ -15,17 +15,17 @@
  */
 
 export interface RequestFilter {
-  urls: string[]
-  types?: chrome.webRequest.RequestFilter['types']
+  urls: string[];
+  types?: chrome.webRequest.RequestFilter['types'];
 }
 
 export type SsoRequestMessage =
   | { type: 'ping' }
   | { type: 'sso_request'; url: string }
-  | { type: 'stop' }
+  | { type: 'stop' };
 
 export type ExtensionMessage =
   | { type: 'pong' }
   | { type: 'success'; redirect_url: string }
   | { type: 'error'; message: string }
-  | { type: 'cancel' }
+  | { type: 'cancel' };

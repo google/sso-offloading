@@ -94,6 +94,4 @@ function updateButtonState() {
 extensionIdInput.addEventListener('input', updateButtonState);
 authUrlInput.addEventListener('input', updateButtonState);
 
-window.addEventListener('DOMContentLoaded', () => {
-  updateButtonState();
-});
+updateButtonState();
