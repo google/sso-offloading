@@ -50,38 +50,6 @@ This is a TypeScript module designed to be used within an **Isolated Web App** o
 
 ---
 
-## Example Usage
-```typescript
-import { createSsoOffloadingConnector, SsoOffloadingConnectorError } from 'sso_offloading_connector';
-
-// Get a reference to the <cf> element
-const cfElement = document.getElementById('auth-cf'); // Can also be a WebView element.
-
-const SSO_EXTENSION_ID = 'abcdefghijk1234567890'; // The ID of SSO offloading extension
-
-const requestFilter: RequestFilter = {
-    urls: ['https://accounts.google.com/o/oauth2/v2/auth*','https://sso.mycompany.com/*'], // Intercept all requests to these domains.
-};
-
-const onInterceptError = (error: SsoOffloadingConnectorError): void => {
-  console.log("Error occured :(, "+ error.name +": "+ error.message);
-}
-
-// Create connector instance
-const ssoConnector = new SsoOffloadingConnector(
-  SSO_EXTENSION_ID,
-  cfElement,
-  requestFilter,
-  onInterceptError
-);
-
-// Start offloading SSO calls for the cf.
-ssoConnector.start();
-
-// Stop the connector if no longer needed.
-ssoConnector.stop();
-```
-
 ## Dev setup
 1. Build
 ```bash
@@ -91,7 +59,7 @@ npm run build
 # Build the Chrome App example
 npm run build:chrome-app
 
-# Build the Isolated Web App (IWA) example (optional, .swbn can be downloaded from this repo, bundle id: yr57inu2f27fji2d2xd2lj7fjt3scdhby3bs7s4vdxh3rrujkdnaaaic, version 1.0.0)
+# Build the Isolated Web App (IWA) example (optional, .swbn can be downloaded from this repo <url-to-be-specified>, bundle id: yr57inu2f27fji2d2xd2lj7fjt3scdhby3bs7s4vdxh3rrujkdnaaaic, version 1.0.0)
 # Note: This may require a pre-generated key.
 npm run build:iwa
 ```
@@ -104,8 +72,7 @@ IWA bundle (`.swbn` file), as well as its `update_manifest.json` file, needs to 
 
 4. Test time!
 
-
-
 This is not an officially supported Google product. This project is not
 eligible for the [Google Open Source Software Vulnerability Rewards
 Program](https://bughunters.google.com/open-source-security).
+
