@@ -22,10 +22,7 @@ inputs:
   input-dir:
     description: 'The path to the directory to be packaged.'
     required: true
-  version:
-    description: 'The version string to use in the output file name.'
-    required: true
-  base-name:
+  name:
     description: 'The base name for the output .crx file (e.g., "my-extension").'
     required: true
 
@@ -43,7 +40,7 @@ runs:
     - id: package
       shell: bash
       run: |
-        echo "Packaging ${{ inputs.base-name }} from directory: ${{ inputs.input-dir }}"
+        echo "Packaging ${{ inputs.name }} from directory: ${{ inputs.input-dir }}"
         echo "${{ inputs.key }}" > key.pem
 
         google-chrome --pack-extension=${{ inputs.input-dir }} --pack-extension-key=key.pem
@@ -56,7 +53,7 @@ runs:
         EXPECTED_CRX_PATH="${{ inputs.input-dir }}.crx"
 
         if [ -f "$EXPECTED_CRX_PATH" ]; then
-          VERSIONED_CRX_NAME="${{ inputs.base-name }}-${{ inputs.version }}.crx"
+          VERSIONED_CRX_NAME="${{ inputs.name }}.crx"
           mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
           echo "Created CRX: $VERSIONED_CRX_NAME"
           echo "name=$VERSIONED_CRX_NAME" >> $GITHUB_OUTPUT
