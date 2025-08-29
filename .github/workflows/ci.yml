@@ -50,6 +50,7 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         default_bump: minor
+        release_branches: development, main
     
     - name: Get all tags
       uses: octokit/request-action@v2.x
