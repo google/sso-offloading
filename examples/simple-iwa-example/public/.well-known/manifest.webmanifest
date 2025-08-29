@@ -1,24 +1,30 @@
 {
-    "id": "/",
-    "short_name": "IWA",
-    "name": "Basic IWA Example",
-    "version": "1.0.4",
-    "manifest_version": 3,
-    "update_manifest_url": "<url-to-be-specified>",
-    "icons": [
-        {
-          "src": "/images/icon.png",
-          "type": "image/png",
-          "sizes": "512x512",
-          "purpose": "any maskable"
-        }
-      ],
-    "start_url": "/",
-    "display": "standalone",
-    "display_override": ["borderless"],
-    "scope": "/",
-    "permissions_policy": {
-      "controlled-frame": ["self"],
-      "window-management": ["self"],
+  "id": "/",
+  "short_name": "IWA",
+  "name": "Basic IWA Example",
+  "version": "1.0.0",
+  "manifest_version": 3,
+  "update_manifest_url": "https://github.com/google/sso-offloading/releases/latest/download/iwa-update-manifest.json",
+  "icons": [
+    {
+      "src": "/images/icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "display_override": [
+    "borderless"
+  ],
+  "scope": "/",
+  "permissions_policy": {
+    "controlled-frame": [
+      "self"
+    ],
+    "window-management": [
+      "self"
+    ]
   }
+}
