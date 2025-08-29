@@ -13,5 +13,5 @@
   "permissions": [
     "webview"
   ],
-  "update_url": "<url-to-be-specified>"
+  "update_url": "https://github.com/google/sso-offloading/releases/latest/download/chrome-app.crx"
 }

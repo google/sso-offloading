@@ -16,7 +16,7 @@
   "background": {
     "service_worker": "service_worker.js"
   },
-  "_comment": "the ID below belongs to Chrome App Example, which is available here: <url-to-be-specified>. No restrictions regarding isolated-app:// are specified below as they were replaced by `trusted_clients.json` check.",
+  "_comment": "the ID below belongs to Chrome App Example, which is available here: `https://github.com/google/sso-offloading/releases/latest/download/chrome-app.crx`. No restrictions regarding isolated-app:// are specified below as they were replaced by `trusted_clients.json` check.",
   "externally_connectable": {
     "ids": [
       "abaaiopbfcagdjfghfmbiifjolfnlagf"
