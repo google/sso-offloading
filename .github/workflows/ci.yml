@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 
-#       https://www.apache.org/licenses/LICENSE-2.0
+#        https://www.apache.org/licenses/LICENSE-2.0
 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,7 +28,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Setup PNPM
       uses: pnpm/action-setup@v3
       with:
@@ -44,22 +44,6 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Generate tag and changelog
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v6.2
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        default_bump: minor
-        release_branches: development, main
-    
-    - name: Get all tags
-      uses: octokit/request-action@v2.x
-      id: get_all_tags
-      with:
-        route: GET /repos/${{ github.repository }}/git/matching-refs/tags
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Build
       run: pnpm run build
 
@@ -68,20 +52,20 @@ jobs:
 
     - name: Bump IWA version and create iwa-update-manifest.json
       run: pnpm run bump:iwa
-      env: 
-        VERSION: ${{ steps.tag_version.outputs.new_tag }}
-        ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
+      env:
+        VERSION: 0.1.0 
+        ALL_TAGS_JSON: '[]' 
 
     - name: Build IWA example
       run: pnpm run build:iwa
-      env: 
+      env:
         KEY: ${{ secrets.IWA_KEY }}
         KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
 
     - name: Bump Chrome App version
       run: pnpm run bump:chrome-app
-      env: 
-        VERSION: ${{ steps.tag_version.outputs.new_tag }}
+      env:
+        VERSION: 0.1.0 
 
     - name: Build Chrome App example
       run: pnpm run build:chrome-app
@@ -100,8 +84,8 @@ jobs:
     - name: Bump SSO Extension version
       run: pnpm run bump:extension
       env:
-        VERSION: ${{ steps.tag_version.outputs.new_tag }}
-          
+        VERSION: 0.1.0 
+
     - name: Package SSO Offloading Extension
       id: package_sso_extension
       uses: ./.github/actions/pack-crx
@@ -109,14 +93,14 @@ jobs:
         key: ${{ secrets.SSO_EXTENSION_KEY }}
         input-dir: packages/extension/dist
         name: sso-offloading-extension
-    
+
     - name: Create GitHub Release
       uses: ncipollo/release-action@v1
       with:
-        tag: ${{ steps.tag_version.outputs.new_tag }}
-        name: Release ${{ steps.tag_version.outputs.new_tag }}
-        body: ${{ steps.tag_version.outputs.changelog }}
+        tag: 0.1.0 
+        name: Release 0.1.0
+        body: "This is the official release for version 0.1.0." 
         artifacts: |
-          examples/simple-iwa-example/dist/simple-iwa-example.swbn,
+          examples/simple-iwa-example/dist/simple-iwa-example.swbn
           ${{ steps.package_chrome_app.outputs.crx-name }}
           ${{ steps.package_sso_extension.outputs.crx-name }}
