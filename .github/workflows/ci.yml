@@ -19,8 +19,6 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
-    types: [ opened, synchronize ]
   workflow_dispatch:
 
 jobs:
@@ -88,8 +86,7 @@ jobs:
       with:
         key: ${{ secrets.CHROME_APP_KEY }}
         input-dir: examples/chrome-app-example/chrome-app
-        version: ${{ steps.chrome_app_version.outputs.version }}
-        base-name: chrome-app
+        name: chrome-app
 
     - name: Upload Chrome App .crx Artifact
       uses: actions/upload-artifact@v4
@@ -111,8 +108,7 @@ jobs:
       with:
         key: ${{ secrets.SSO_EXTENSION_KEY }}
         input-dir: packages/extension/dist
-        version: ${{ steps.sso_offloading_extension_version.outputs.version }}
-        base-name: sso-offloading-extension
+        name: sso-offloading-extension
 
     - name: Upload SSO Offloading Extension .crx Artifact
       uses: actions/upload-artifact@v4
