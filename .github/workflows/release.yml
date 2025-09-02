@@ -29,7 +29,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
+      contents: write
 
     steps:
       - name: Checkout
@@ -65,6 +65,11 @@ jobs:
           route: GET /repos/${{ github.repository }}/git/matching-refs/tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump SSO Connector version
+        run: pnpm run bump:sso-connector
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
 
       - name: Build
         run: pnpm run build
@@ -113,6 +118,25 @@ jobs:
           input-dir: packages/extension/dist
           name: sso-offloading-extension
 
+      - name: Get Chrome App Version
+        id: chrome_app_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: examples/chrome-app-example/manifest.json
+
+      - name: Generate update_manifest.xml content
+        id: generate_manifest
+        uses: ./.github/actions/generate-update-manifest-xml
+        with:
+          sso-extension-id: ${{ steps.package_sso_extension.outputs.crx-id }}
+          sso-extension-version: ${{ steps.tag_version.outputs.new_tag }}
+          chrome-app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
+          chrome-app-version: ${{ steps.chrome_app_version.outputs.version }}
+          repository: ${{ github.repository }}
+
+      - name: Write update_manifest.xml
+        run: echo "${{ steps.generate_manifest.outputs.xml-content }}" > update_manifest.xml
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
@@ -124,4 +148,4 @@ jobs:
             ${{ steps.package_chrome_app.outputs.crx-name }}
             ${{ steps.package_sso_extension.outputs.crx-name }}
             ./iwa-update-manifest.json
-            
+            ./update_manifest.xml

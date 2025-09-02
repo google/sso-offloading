@@ -14,7 +14,8 @@
     "build:iwa": "pnpm --filter \"./examples/simple-iwa-example\" run build",
     "bump:iwa": "node ./scripts/bump-iwa-version.js",
     "bump:chrome-app": "node ./scripts/bump-manifest-version.js ./examples/chrome-app-example/manifest.json",
-    "bump:extension": "node ./scripts/bump-manifest-version.js ./packages/extension/src/manifest.json"
+    "bump:extension": "node ./scripts/bump-manifest-version.js ./packages/extension/src/manifest.json",
+    "bump:sso-connector": "node ./scripts/bump-manifest-version.js ./packages/sso-offloading-connector/package.json"
   },
   "repository": {
     "type": "git",

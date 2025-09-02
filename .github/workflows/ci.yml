@@ -25,95 +25,109 @@ jobs:
   build_and_test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup PNPM
-      uses: pnpm/action-setup@v3
-      with:
-        version: 8
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
 
-    - name: Setup Node
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
-        cache: 'pnpm'
-        cache-dependency-path: pnpm-lock.yaml
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
-    - name: Install dependencies
-      run: pnpm install
+      - name: Install dependencies
+        run: pnpm install
 
-    - name: Build
-      run: pnpm run build
+      - name: Build
+        run: pnpm run build
 
-    - name: Unit test
-      run: pnpm run test
+      - name: Unit test
+        run: pnpm run test
 
-    - name: Build IWA example
-      run: pnpm run build:iwa
-      env:
-        KEY: ${{ secrets.IWA_KEY }}
-        KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+      - name: Build IWA example
+        run: pnpm run build:iwa
+        env:
+          KEY: ${{ secrets.IWA_KEY }}
+          KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
 
-    - name: Get IWA version
-      id: iwa_version
-      uses: ./.github/actions/get-version
-      with:
-        manifest-path: examples/simple-iwa-example/public/.well-known/manifest.webmanifest
+      - name: Get IWA version
+        id: iwa_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: examples/simple-iwa-example/public/.well-known/manifest.webmanifest
 
-    - name: Upload IWA Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
-        path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
-        overwrite: true
+      - name: Upload IWA Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
+          path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
+          overwrite: true
 
-    - name: Build Chrome App example
-      run: pnpm run build:chrome-app
+      - name: Build Chrome App example
+        run: pnpm run build:chrome-app
 
-    - name: Install Google Chrome
-      uses: browser-actions/setup-chrome@v1
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
 
-    - name: Get Chrome App Version
-      id: chrome_app_version
-      uses: ./.github/actions/get-version
-      with:
-        manifest-path: examples/chrome-app-example/manifest.json
+      - name: Get Chrome App Version
+        id: chrome_app_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: examples/chrome-app-example/manifest.json
 
-    - name: Package Chrome App
-      id: package_chrome_app
-      uses: ./.github/actions/pack-crx
-      with:
-        key: ${{ secrets.CHROME_APP_KEY }}
-        input-dir: examples/chrome-app-example/chrome-app
-        name: chrome-app
+      - name: Package Chrome App
+        id: package_chrome_app
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.CHROME_APP_KEY }}
+          input-dir: examples/chrome-app-example/chrome-app
+          name: chrome-app
 
-    - name: Upload Chrome App .crx Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
-        path: ${{ steps.package_chrome_app.outputs.crx-name }}
-        retention-days: 7
-        overwrite: true
+      - name: Upload Chrome App .crx Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
+          path: ${{ steps.package_chrome_app.outputs.crx-name }}
+          retention-days: 7
+          overwrite: true
 
-    - name: Get SSO Offloading Extension Version
-      id: sso_offloading_extension_version
-      uses: ./.github/actions/get-version
-      with:
-        manifest-path: packages/extension/dist/manifest.json
+      - name: Get SSO Offloading Extension Version
+        id: sso_offloading_extension_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: packages/extension/dist/manifest.json
 
-    - name: Package SSO Offloading Extension
-      id: package_sso_extension
-      uses: ./.github/actions/pack-crx
-      with:
-        key: ${{ secrets.SSO_EXTENSION_KEY }}
-        input-dir: packages/extension/dist
-        name: sso-offloading-extension
+      - name: Package SSO Offloading Extension
+        id: package_sso_extension
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.SSO_EXTENSION_KEY }}
+          input-dir: packages/extension/dist
+          name: sso-offloading-extension
 
-    - name: Upload SSO Offloading Extension .crx Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
-        path: ${{ steps.package_sso_extension.outputs.crx-name }}
-        retention-days: 7
-        overwrite: true
+      - name: Upload SSO Offloading Extension .crx Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
+          path: ${{ steps.package_sso_extension.outputs.crx-name }}
+          retention-days: 7
+          overwrite: true
+
+      - name: Generate update_manifest.xml content
+        id: generate_manifest
+        uses: ./.github/actions/generate-update-manifest-xml
+        with:
+          sso-extension-id: ${{ steps.package_sso_extension.outputs.crx-id }}
+          sso-extension-version: ${{ steps.sso_offloading_extension_version.outputs.version }}
+          chrome-app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
+          chrome-app-version: ${{ steps.chrome_app_version.outputs.version }}
+          repository: ${{ github.repository }}
+
+      - name: Log generated update_manifest.xml 
+        run: echo "${{ steps.generate_manifest.outputs.xml-content }}" 
+
