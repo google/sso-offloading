@@ -1,7 +1,7 @@
 {
   "name": "SSO Offloading Handler",
   "description": "Handles authentication flows delegated from a trusted application.",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "manifest_version": 3,
   "permissions": [
     "tabs",
