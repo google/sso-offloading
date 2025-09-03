@@ -1,0 +1,32 @@
+{
+  "name": "sso-offloading-connector",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "main": "./dist/sso-offloading-connector.umd.cjs",
+  "module": "./dist/sso-offloading-connector.js",
+  "types": "./dist/sso-offloading-connector.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/sso-offloading-connector.d.ts",
+      "import": "./dist/sso-offloading-connector.js",
+      "require": "./dist/sso-offloading-connector.umd.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.326",
+    "tsup": "^8.5.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vite": "^7.1.3"
+  }
+}

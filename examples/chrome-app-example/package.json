@@ -1,0 +1,18 @@
+{
+  "name": "chrome-app-example",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A basic Chrome App example for SSO offloading.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "sso-offloading-connector": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0",
+    "vite-plugin-static-copy": "^1.0.1"
+  }
+}

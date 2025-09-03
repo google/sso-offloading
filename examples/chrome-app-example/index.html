@@ -1,0 +1,63 @@
+<!doctype html>
+<!--
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+      https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<html>
+  <head>
+    <title>SSO Offloading Chrome App</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <h1>SSO Offloading Connector - Chrome App Demo</h1>
+
+    <form id="ssoForm">
+      <div class="form-group">
+        <label for="extensionId">SSO Handler Extension ID:</label>
+        <input
+          type="text"
+          id="extensionId"
+          value="jmdcfpeebneidlbnldlhcifibpkidhkn"
+        />
+      </div>
+      <div class="form-group">
+        <label for="authUrl">Auth URL Pattern:</label>
+        <input
+          type="text"
+          id="authUrl"
+          value="https://accounts.google.com/o/oauth2/v2/auth*"
+        />
+      </div>
+      <button type="submit" id="enableSsoOffloadingButton">
+        Start Connector
+      </button>
+      <button id="stopSsoOffloadingButton" disabled>Stop Connector</button>"
+    </form>
+
+    <div id="statusContainer">
+      <p>Enter your extension details and click "Start Connector".</p>
+    </div>
+
+    <webview
+      id="sso-webview"
+      style="height: 1000px"
+      src="https://developers.google.com/oauthplayground/#step1&apisSelect=openid&response_type=code"
+    >
+    </webview>
+
+    <script src="/webview.js"></script>
+  </body>
+</html>

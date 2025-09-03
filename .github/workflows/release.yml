@@ -1,0 +1,151 @@
+# .github/workflows/release.yml
+# Copyright 2025 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#        https://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate tag and changelog
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor
+          release_branches: development, main
+
+      - name: Get all tags
+        uses: octokit/request-action@v2.x
+        id: get_all_tags
+        with:
+          route: GET /repos/${{ github.repository }}/git/matching-refs/tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump SSO Connector version
+        run: pnpm run bump:sso-connector
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Bump IWA version and create iwa-update-manifest.json
+        run: pnpm run bump:iwa
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
+          ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
+
+      - name: Build IWA example
+        run: pnpm run build:iwa
+        env:
+          KEY: ${{ secrets.IWA_KEY }}
+          KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+
+      - name: Bump Chrome App version
+        run: pnpm run bump:chrome-app
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Build Chrome App example
+        run: pnpm run build:chrome-app
+
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Package Chrome App
+        id: package_chrome_app
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.CHROME_APP_KEY }}
+          input-dir: examples/chrome-app-example/chrome-app
+          name: chrome-app
+
+      - name: Bump SSO Extension version
+        run: pnpm run bump:extension
+        env:
+          VERSION: ${{ steps.tag_version.outputs.new_tag }}
+
+      - name: Package SSO Offloading Extension
+        id: package_sso_extension
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.SSO_EXTENSION_KEY }}
+          input-dir: packages/extension/dist
+          name: sso-offloading-extension
+
+      - name: Get Chrome App Version
+        id: chrome_app_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: examples/chrome-app-example/manifest.json
+
+      - name: Generate update_manifest.xml content
+        id: generate_manifest
+        uses: ./.github/actions/generate-update-manifest-xml
+        with:
+          sso-extension-id: ${{ steps.package_sso_extension.outputs.crx-id }}
+          sso-extension-version: ${{ steps.tag_version.outputs.new_tag }}
+          chrome-app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
+          chrome-app-version: ${{ steps.chrome_app_version.outputs.version }}
+          repository: ${{ github.repository }}
+
+      - name: Write update_manifest.xml
+        run: echo "${{ steps.generate_manifest.outputs.xml-content }}" > update_manifest.xml
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
+          artifacts: |
+            examples/simple-iwa-example/dist/simple-iwa-example.swbn
+            ${{ steps.package_chrome_app.outputs.crx-name }}
+            ${{ steps.package_sso_extension.outputs.crx-name }}
+            ./iwa-update-manifest.json
+            ./update_manifest.xml

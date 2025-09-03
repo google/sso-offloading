@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "SSO Offloading Chrome App",
+  "description": "Example Chrome App for SSO Offloading from WebView.",
+  "version": "0.1.0",
+  "app": {
+    "background": {
+      "scripts": [
+        "background.js"
+      ]
+    }
+  },
+  "permissions": [
+    "webview"
+  ],
+  "update_url": "https://github.com/google/sso-offloading/releases/latest/download/chrome-app.crx"
+}

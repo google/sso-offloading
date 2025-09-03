@@ -1,0 +1,16 @@
+{
+  // Set Prettier as the default formatter for TypeScript files
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+
+  // Enable format on save
+  "editor.formatOnSave": true,
+
+  // Run ESLint to fix issues on save
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+    },
+    "prettier.prettierPath": "./node_modules/prettier",
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }

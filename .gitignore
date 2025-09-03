@@ -1,0 +1,4 @@
+node_modules/
+build.sh
+dist*/
+examples/chrome-app-example/chrome-app

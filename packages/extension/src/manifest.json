@@ -1,0 +1,28 @@
+{
+  "name": "SSO Offloading Handler",
+  "description": "Handles authentication flows delegated from a trusted application.",
+  "version": "0.1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "tabs",
+    "webRequest",
+    "webNavigation",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "service_worker.js"
+  },
+  "_comment": "the ID below belongs to Chrome App Example, which is available here: `https://github.com/google/sso-offloading/releases/latest/download/chrome-app.crx`. No restrictions regarding isolated-app:// are specified below as they were replaced by `trusted_clients.json` check.",
+  "externally_connectable": {
+    "ids": [
+      "abaaiopbfcagdjfghfmbiifjolfnlagf"
+    ],
+    "matches": [
+      "isolated-app://*/*"
+    ]
+  }
+}
