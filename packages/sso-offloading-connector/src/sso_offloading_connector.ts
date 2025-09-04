@@ -67,7 +67,7 @@ const pingExtension = (
   });
 };
 
-// Creates a request listener for an Isolated Web App's <cf>.
+// Creates a request listener for an Isolated Web App's <controlledframe>.
 // It returns a function that will detach the listener when called.
 const createIwaRequestListener = (
   target: any,
