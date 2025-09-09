@@ -77,7 +77,7 @@ describe('createSsoOffloadingConnector', () => {
 
     mockSendMessage.mockImplementationOnce((_extId, msg, cb) => {
       if (msg.type === 'sso_request') {
-        cb({ type: 'success', redirect_url: newUrl });
+        cb({ type: 'success', redirect_uri: newUrl });
       }
     });
 
