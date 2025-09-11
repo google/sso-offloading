@@ -19,6 +19,19 @@ import trustedClients from './trusted_clients.json';
 const REDIRECT_URI_PARAM = 'redirect_uri';
 const activeFlows = new Map<string, { tabId: number; windowId: number }>();
 
+class AuthFlowError extends Error {
+  redirect_uri?: string;
+
+  constructor(message: string, redirect_uri?: string) {
+    super(message);
+    this.name = 'AuthFlowError';
+    // Authorization resulting in an error can still
+    // include a `redirect_uri` or `error_uri` for the final redirection
+    // https://www.oauth.com/oauth2-servers/authorization/the-authorization-response/
+    this.redirect_uri = redirect_uri;
+  }
+}
+
 // Finds the last focused window or creates a new one for the auth flow.
 const getOrCreateAuthTab = async (
   url: URL
@@ -68,25 +81,41 @@ const waitForAuthRedirect = (
   let onTabUpdateListener: any;
   let onTabRemoveListener: any;
 
-  const redirectPromise = new Promise<string>((resolve, reject) => {
-    onTabUpdateListener = (tabId: number, changeInfo: { url?: string }) => {
-      if (
-        tabId === authTabId &&
-        changeInfo.url?.startsWith(expectedRedirectUrl)
-      ) {
-        resolve(changeInfo.url);
-      }
-    };
+  const redirectPromise = new Promise<string>(
+    (resolve, reject: (reason?: any) => void) => {
+      onTabUpdateListener = (tabId: number, changeInfo: { url?: string }) => {
+        if (
+          tabId === authTabId &&
+          changeInfo.url?.startsWith(expectedRedirectUrl)
+        ) {
+          const capturedUrl = new URL(changeInfo.url);
+          // Check for standard OAuth2/OIDC error parameters in the redirect.
+          // If an error is present, the flow has failed, even though it can still
+          // redirect (hence the url is still passed in the error).
+          if (
+            capturedUrl.searchParams.has('error') ||
+            capturedUrl.searchParams.has('error_code')
+          ) {
+            const errorMessage =
+              capturedUrl.searchParams.get('error_description') ||
+              capturedUrl.searchParams.get('error') ||
+              'Identity Provider returned an error.';
+            reject(new AuthFlowError(errorMessage, changeInfo.url));
+          }
+          resolve(changeInfo.url);
+        }
+      };
 
-    onTabRemoveListener = (tabId: number) => {
-      if (tabId === authTabId) {
-        reject(new Error('User canceled the authentication flow.'));
-      }
-    };
+      onTabRemoveListener = (tabId: number) => {
+        if (tabId === authTabId) {
+          reject(new AuthFlowError('The SSO flow has been cancelled.'));
+        }
+      };
 
-    chrome.tabs.onUpdated.addListener(onTabUpdateListener);
-    chrome.tabs.onRemoved.addListener(onTabRemoveListener);
-  });
+      chrome.tabs.onUpdated.addListener(onTabUpdateListener);
+      chrome.tabs.onRemoved.addListener(onTabRemoveListener);
+    }
+  );
 
   const cleanup = () => {
     chrome.tabs.onUpdated.removeListener(onTabUpdateListener);
@@ -129,13 +158,14 @@ async function processSsoFlow(
     // Wait for the user to finish logging in, which resolves the promise
     // and provides the final URL.
     const capturedUrl = await redirectPromise;
-    sendResponse({ type: 'success', redirect_url: capturedUrl });
+
+    sendResponse({ type: 'success', redirect_uri: capturedUrl });
   } catch (error: any) {
-    if (error.message.includes('User canceled')) {
-      sendResponse({ type: 'cancel', message: error.message });
-    } else {
-      sendResponse({ type: 'error', message: error.message });
-    }
+    sendResponse({
+      type: 'error',
+      message: 'Error occured during SSO flow: ' + error.message,
+      redirect_uri: error?.redirect_uri,
+    });
   } finally {
     activeFlows.delete(flowId);
     cleanupListeners();

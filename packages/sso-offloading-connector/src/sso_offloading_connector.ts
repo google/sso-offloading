@@ -67,7 +67,7 @@ const pingExtension = (
   });
 };
 
-// Creates a request listener for an Isolated Web App's <cf>.
+// Creates a request listener for an Isolated Web App's <controlledframe>.
 // It returns a function that will detach the listener when called.
 const createIwaRequestListener = (
   target: any,
@@ -180,7 +180,6 @@ export const createSsoOffloadingConnector = (
       type: 'sso_request',
       url: details.url,
     };
-
     if (isRequestInFlight) {
       // If a flow is already active, send the request again. The extension's
       // handler will see an active flow and focus the existing auth tab
@@ -194,6 +193,7 @@ export const createSsoOffloadingConnector = (
 
     const sendMessageCallback = (response: ExtensionMessage) => {
       isRequestInFlight = false;
+
       if (!response) {
         return onInterceptError(
           new CommunicationError('Extension sent no response.')
@@ -202,33 +202,32 @@ export const createSsoOffloadingConnector = (
 
       switch (response.type) {
         case 'success':
-          updateSource(response.redirect_url);
+          updateSource(response.redirect_uri);
           break;
         case 'error':
+          // If the error response includes a redirect URI, we can still navigate
+          // to it to show the user the error page from the IdP.
+          if (response.redirect_uri) {
+            updateSource(response.redirect_uri);
+          }
           onInterceptError(
-            new SsoOffloadingExtensionResponseError(
-              'Received error response from extension.',
-              response.message
-            )
-          );
-          break;
-        case 'cancel':
-          onInterceptError(
-            new SsoOffloadingExtensionResponseError(
-              'SSO flow was canceled by the user.'
+            new SsoOffloadingExtensionResponseError(response.message
             )
           );
           break;
         default:
           onInterceptError(
-            new CommunicationError(
-              'Received unexpected response from extension.'
-            )
+            new CommunicationError('Received unexpected response type from extension: ' + response?.type)
           );
       }
     };
 
-    chrome.runtime.sendMessage(extensionId, message, sendMessageCallback);
+    try {
+      chrome.runtime.sendMessage(extensionId, message, sendMessageCallback);
+    } catch (e) {
+      isRequestInFlight = false;
+      throw e;
+    }
   };
 
   return {

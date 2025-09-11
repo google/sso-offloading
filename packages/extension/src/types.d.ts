@@ -22,6 +22,6 @@ type SsoRequestMessage =
 
 type ExtensionMessage =
   | { type: 'pong' }
-  | { type: 'success'; redirect_url: string }
-  | { type: 'error'; message: string }
+  | { type: 'success'; redirect_uri: string }
+  | { type: 'error'; message: string; redirect_uri?: string }
   | { type: 'cancel'; message: string };
