@@ -28,13 +28,8 @@ const plugins = [injectHTML()];
 if (process.env.NODE_ENV === 'production') {
   // Get the key and decrypt it to sign the web bundle
   const key = wbnSign.parsePemKey(
-    process.env.KEY || fs.readFileSync('./certs/encrypted_key.pem'),
-    // Use the nullish coalescing operator (??) to allow for empty passphrases.
-    // This prevents the interactive prompt if KEY_PASSPHRASE is an empty string.
-    process.env.KEY_PASSPHRASE ??
-      (await wbnSign.readPassphrase(
-        /*description=*/ './certs/encrypted_key.pem'
-      ))
+    process.env.KEY,
+    process.env.KEY_PASSPHRASE ?? ""
   );
 
   // Add the wbn bundle only during a production build
