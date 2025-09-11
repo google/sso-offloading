@@ -19,6 +19,7 @@
   "scope": "/",
   "permissions_policy": {
     "controlled-frame": ["self"],
-    "window-management": ["self"]
+    "window-management": ["self"],
+    "cross-origin-isolated": ["self"]
   }
 }
