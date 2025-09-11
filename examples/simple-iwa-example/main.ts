@@ -32,7 +32,10 @@ const formValidationMessage = document.getElementById(
 let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null;
 
 const handleInterceptError = (error: any) => {
-  console.error(`SSO Error: ${error.name} - ${error.message}`, error.details);
+  formValidationMessage.textContent = `SSO Error: ${error.name} - ${error.message}`;
+  formValidationMessage.className = 'error';
+  formValidationMessage.style.display = 'block';
+  console.error('SSO Error:', error);
 };
 
 const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
@@ -41,7 +44,8 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
     ssoConnector = null;
   }
 
-  console.log('Attempting to start SSO connector...');
+  formValidationMessage.textContent = 'Attempting to start SSO connector...';
+  formValidationMessage.style.display = 'block';
 
   ssoConnector = createSsoOffloadingConnector(
     extensionId,
@@ -52,30 +56,44 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
     handleInterceptError
   );
 
-  await ssoConnector.start();
+  try {
+    await ssoConnector.start();
+    formValidationMessage.textContent = 'SSO connector started successfully.';
+    formValidationMessage.className = 'success';
+  } catch (error: any) {
+    formValidationMessage.textContent = `Failed to start SSO connector: ${error.message}`;
+    formValidationMessage.className = 'error';
+    console.error('Failed to start SSO connector:', error);
+  }
 };
 
 ssoForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
-  enableSsoOffloadingButton.disabled = !(extensionId && authUrl);
+  if (extensionId && authUrl) {
+    enableSsoOffloadingButton.disabled = false;
+    formValidationMessage.style.display = 'none';
+  } else {
+    formValidationMessage.className = 'error';
+    formValidationMessage.textContent =
+      'Please enter both Extension ID and Auth URL.';
+    formValidationMessage.style.display = 'block';
+  }
 });
 
-const hideValidationMessage = () => {
-  if (formValidationMessage.style.display !== 'none') {
-    formValidationMessage.style.display = 'none';
-  }
+const resetSsoButton = () => {
+  formValidationMessage.style.display = 'none';
+  enableSsoOffloadingButton.disabled = true;
 };
 
-extensionIdInput.addEventListener('input', hideValidationMessage);
-authUrlInput.addEventListener('input', hideValidationMessage);
+extensionIdInput.addEventListener('input', resetSsoButton);
+authUrlInput.addEventListener('input', resetSsoButton);
 
 enableSsoOffloadingButton.addEventListener('click', () => {
   const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
   if (extensionId && authUrl) {
-    formValidationMessage.style.display = 'none';
     setupSsoOffloading(extensionId, authUrl);
   } else {
     formValidationMessage.textContent =
@@ -84,7 +102,3 @@ enableSsoOffloadingButton.addEventListener('click', () => {
   }
 });
 
-// Initial check to enable button if values are present on load
-if (extensionIdInput?.value && authUrlInput?.value) {
-  enableSsoOffloadingButton.disabled = false;
-}
