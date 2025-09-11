@@ -17,7 +17,7 @@ name: Release
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ['CI']
     types:
       - completed
     branches:
@@ -138,12 +138,32 @@ jobs:
       - name: Write update_manifest.xml
         run: echo "${{ steps.generate_manifest.outputs.xml-content }}" > update_manifest.xml
 
+      - name: Generate Release Body
+        id: generate_release_body
+        run: |
+          IWA_BUNDLE_ID=$(jq -r 'keys[0]' packages/extension/src/trusted_clients.json | sed 's|isolated-app://||')
+          EXTENSION_NAME=$(jq -r '.name' packages/extension/dist/manifest.json)
+          CHANGELOG="${{ steps.tag_version.outputs.changelog }}"
+          
+          # Use a unique delimiter for multiline content
+          EOF_MARKER=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
+          echo "body<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
+          echo "$CHANGELOG" >> "$GITHUB_OUTPUT"
+          echo "" >> "$GITHUB_OUTPUT"
+          echo "---" >> "$GITHUB_OUTPUT"
+          echo "### Artifact IDs" >> "$GITHUB_OUTPUT"
+          echo "- **Extension Name:** \`$EXTENSION_NAME\`" >> "$GITHUB_OUTPUT"
+          echo "- **SSO Offloading Extension ID:** \`${{ steps.package_sso_extension.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"
+          echo "- **Chrome App Example ID:** \`${{ steps.package_chrome_app.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"
+          echo "- **IWA Example Bundle ID:** \`$IWA_BUNDLE_ID\`" >> "$GITHUB_OUTPUT"
+          echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
           name: Release ${{ steps.tag_version.outputs.new_tag }}
-          body: ${{ steps.tag_version.outputs.changelog }}
+          body: ${{ steps.generate_release_body.outputs.body }}
           artifacts: |
             examples/simple-iwa-example/dist/simple-iwa-example.swbn
             ${{ steps.package_chrome_app.outputs.crx-name }}
