@@ -82,6 +82,7 @@ jobs:
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
+        id: build_iwa_example
         run: pnpm run build:iwa
         env:
           KEY: ${{ secrets.IWA_KEY }}
@@ -141,10 +142,9 @@ jobs:
       - name: Generate Release Body
         id: generate_release_body
         run: |
-          IWA_BUNDLE_ID=$(jq -r 'keys[0]' packages/extension/src/trusted_clients.json | sed 's|isolated-app://||')
           EXTENSION_NAME=$(jq -r '.name' packages/extension/dist/manifest.json)
           CHANGELOG="${{ steps.tag_version.outputs.changelog }}"
-          
+
           # Use a unique delimiter for multiline content
           EOF_MARKER=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
           echo "body<<$EOF_MARKER" >> "$GITHUB_OUTPUT"
@@ -154,8 +154,8 @@ jobs:
           echo "### Artifact IDs" >> "$GITHUB_OUTPUT"
           echo "- **Extension Name:** \`$EXTENSION_NAME\`" >> "$GITHUB_OUTPUT"
           echo "- **SSO Offloading Extension ID:** \`${{ steps.package_sso_extension.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"
-          echo "- **Chrome App Example ID:** \`${{ steps.package_chrome_app.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"
-          echo "- **IWA Example Bundle ID:** \`$IWA_BUNDLE_ID\`" >> "$GITHUB_OUTPUT"
+          echo "- **Chrome App Example ID:** \`${{ steps.package_chrome_app.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"          
+          echo "- **IWA Example Bundle ID:** \`${{ steps.build_iwa_example.outputs.iwa_bundle_id }}\`" >> "$GITHUB_OUTPUT"
           echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
