@@ -57,6 +57,9 @@ importers:
 
   examples/simple-iwa-example:
     dependencies:
+      rollup:
+        specifier: ^3.29.5
+        version: 3.29.5
       sso-offloading-connector:
         specifier: workspace:*
         version: link:../../packages/sso-offloading-connector
@@ -69,7 +72,7 @@ importers:
         version: 16.6.1
       rollup-plugin-webbundle:
         specifier: ^0.2.0
-        version: 0.2.0(rollup@4.43.0)
+        version: 0.2.0(rollup@3.29.5)
       typescript:
         specifier: ^5.2.2
         version: 5.8.3
@@ -1366,6 +1369,11 @@ packages:
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       rollup: '>=1.21.0 <4.0.0'
+
+  rollup@3.29.5:
+    resolution: {integrity: sha512-GVsDdsbJzzy4S/v3dqWPJ7EfvZJfCHiDqe80IyrF59LYuP+e6U1LJoUqeuqRbwAWoMNoXivMNeNAOf5E22VA1w==}
+    engines: {node: '>=14.18.0', npm: '>=8.0.0'}
+    hasBin: true
 
   rollup@4.43.0:
     resolution: {integrity: sha512-wdN2Kd3Twh8MAEOEJZsuxuLKCsBEo4PVNLK6tQWAn10VhsVewQLzcucMgLolRlhFybGxfclbPeEYBaP6RvUFGg==}
@@ -2824,13 +2832,17 @@ snapshots:
 
   reusify@1.1.0: {}
 
-  rollup-plugin-webbundle@0.2.0(rollup@4.43.0):
+  rollup-plugin-webbundle@0.2.0(rollup@3.29.5):
     dependencies:
       mime: 2.6.0
-      rollup: 4.43.0
+      rollup: 3.29.5
       wbn: 0.0.9
       wbn-sign: 0.2.0
       zod: 3.25.76
+
+  rollup@3.29.5:
+    optionalDependencies:
+      fsevents: 2.3.3
 
   rollup@4.43.0:
     dependencies:

@@ -9,6 +9,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "rollup": "^3.29.5",
     "sso-offloading-connector": "workspace:*"
   },
   "devDependencies": {
