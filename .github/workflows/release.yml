@@ -126,15 +126,22 @@ jobs:
         with:
           manifest-path: examples/chrome-app-example/manifest.json
 
+      - name: Get Extension Version
+        id: sso_extension_version
+        uses: ./.github/actions/get-version
+        with:
+          manifest-path: packages/extension/dist/manifest.json
+
       - name: Generate update_manifest.xml content
         id: generate_manifest
         uses: ./.github/actions/generate-update-manifest-xml
         with:
           sso-extension-id: ${{ steps.package_sso_extension.outputs.crx-id }}
-          sso-extension-version: ${{ steps.tag_version.outputs.new_tag }}
+          sso-extension-version: ${{ steps.sso_extension_version.outputs.version }}
           chrome-app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
           chrome-app-version: ${{ steps.chrome_app_version.outputs.version }}
           repository: ${{ github.repository }}
+          github-tag: ${{steps.tag_version.outputs.new_tag }}
 
       - name: Write update_manifest.xml
         run: echo "${{ steps.generate_manifest.outputs.xml-content }}" > update_manifest.xml

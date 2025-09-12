@@ -17,9 +17,6 @@ import { createSsoOffloadingConnector } from 'sso-offloading-connector';
 import './style.css';
 
 const ssoForm = document.getElementById('ssoForm') as HTMLFormElement;
-const extensionIdInput = document.getElementById(
-  'extensionId'
-) as HTMLInputElement;
 const authUrlInput = document.getElementById('authUrl') as HTMLInputElement;
 const enableSsoOffloadingButton = document.getElementById(
   'enableSsoOffloadingButton'
@@ -38,7 +35,7 @@ const handleInterceptError = (error: any) => {
   console.error('SSO Error:', error);
 };
 
-const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
+const setupSsoOffloading = async (authUrl: string) => {
   if (ssoConnector) {
     ssoConnector.stop();
     ssoConnector = null;
@@ -48,7 +45,6 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
   formValidationMessage.style.display = 'block';
 
   ssoConnector = createSsoOffloadingConnector(
-    extensionId,
     ssoCf as any,
     {
       urls: [authUrl],
@@ -69,15 +65,13 @@ const setupSsoOffloading = async (extensionId: string, authUrl: string) => {
 
 ssoForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
-  if (extensionId && authUrl) {
+  if (authUrl) {
     enableSsoOffloadingButton.disabled = false;
     formValidationMessage.style.display = 'none';
   } else {
     formValidationMessage.className = 'error';
-    formValidationMessage.textContent =
-      'Please enter both Extension ID and Auth URL.';
+    formValidationMessage.textContent = 'Please enter an Auth URL.';
     formValidationMessage.style.display = 'block';
   }
 });
@@ -87,18 +81,14 @@ const resetSsoButton = () => {
   enableSsoOffloadingButton.disabled = true;
 };
 
-extensionIdInput.addEventListener('input', resetSsoButton);
 authUrlInput.addEventListener('input', resetSsoButton);
 
 enableSsoOffloadingButton.addEventListener('click', () => {
-  const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
-  if (extensionId && authUrl) {
-    setupSsoOffloading(extensionId, authUrl);
+  if (authUrl) {
+    setupSsoOffloading(authUrl);
   } else {
-    formValidationMessage.textContent =
-      'Please enter both Extension ID and Auth URL.';
+    formValidationMessage.textContent = 'Please enter an Auth URL.';
     formValidationMessage.style.display = 'block';
   }
 });
-
