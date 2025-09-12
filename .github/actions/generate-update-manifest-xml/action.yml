@@ -33,9 +33,9 @@ inputs:
     description: 'The GitHub repository (owner/repo).'
     required: true
   github-tag:
-    description: ""
+    description: 'GitHub tag under which the builds can be found.'
     required: false
-    default: "latest"
+    default: 'latest'
 
 outputs:
   xml-content:
@@ -51,16 +51,16 @@ runs:
       run: |
         EOF_MARKER=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
         echo "content<<$EOF_MARKER" >> $GITHUB_OUTPUT
-        cat <<EOF >> $GITHUB_OUTPUT
-        <?xml version="1.0" encoding="UTF-8"?>
-        <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+        cat <<'EOF' >> $GITHUB_OUTPUT
+        <?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        <gupdate xmlns=\"http://www.google.com/update2/response\" protocol=\"2.0\">
           <!-- SSO Offloading Extension -->
-          <app appid="${{ inputs.sso-extension-id }}">
-            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/sso-offloading-extension.crx" version="${{ inputs.sso-extension-version }}"/>
+          <app appid=\"${{ inputs.sso-extension-id }}\">
+            <updatecheck codebase=\"https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/sso-offloading-extension.crx\" version=\"${{ inputs.sso-extension-version }}\"/>
           </app>
           <!-- Chrome App -->
-          <app appid="${{ inputs.chrome-app-id }}">
-            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/chrome-app.crx" version="${{ inputs.chrome-app-version }}"/>
+          <app appid=\"${{ inputs.chrome-app-id }}\">
+            <updatecheck codebase=\"https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/chrome-app.crx\" version=\"${{ inputs.chrome-app-version }}\"/>
           </app>
         </gupdate>
         EOF
