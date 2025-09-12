@@ -200,6 +200,14 @@ const handleExternalMessage = async (
     return;
   }
 
+  if (!isSsoRequestValid(sender)) {
+    sendResponse({
+      type: 'error',
+      message: 'Request from an untrusted origin.',
+    });
+    return;
+  }
+  
   if (message.type === 'ping') {
     sendResponse({ type: 'pong' });
     return;
@@ -209,14 +217,6 @@ const handleExternalMessage = async (
     sendResponse({
       type: 'error',
       message: 'Request is invalid',
-    });
-    return;
-  }
-
-  if (!isSsoRequestValid(sender)) {
-    sendResponse({
-      type: 'error',
-      message: 'Request from an untrusted origin.',
     });
     return;
   }
