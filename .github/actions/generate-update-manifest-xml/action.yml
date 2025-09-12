@@ -32,6 +32,10 @@ inputs:
   repository:
     description: 'The GitHub repository (owner/repo).'
     required: true
+  github-tag:
+    description: ""
+    required: false
+    default: "latest"
 
 outputs:
   xml-content:
@@ -52,11 +56,11 @@ runs:
         <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
           <!-- SSO Offloading Extension -->
           <app appid="${{ inputs.sso-extension-id }}">
-            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.sso-extension-version }}/sso-offloading-extension.crx" version="${{ inputs.sso-extension-version }}"/>
+            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/sso-offloading-extension.crx" version="${{ inputs.sso-extension-version }}"/>
           </app>
           <!-- Chrome App -->
           <app appid="${{ inputs.chrome-app-id }}">
-            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.chrome-app-version }}/chrome-app.crx" version="${{ inputs.chrome-app-version }}"/>
+            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/chrome-app.crx" version="${{ inputs.chrome-app-version }}"/>
           </app>
         </gupdate>
         EOF
