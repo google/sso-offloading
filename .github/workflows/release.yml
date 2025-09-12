@@ -162,7 +162,7 @@ jobs:
           echo "- **Extension Name:** \`$EXTENSION_NAME\`" >> "$GITHUB_OUTPUT"
           echo "- **SSO Offloading Extension ID:** \`${{ steps.package_sso_extension.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"
           echo "- **Chrome App Example ID:** \`${{ steps.package_chrome_app.outputs.crx-id }}\`" >> "$GITHUB_OUTPUT"          
-          echo "- **IWA Example Bundle ID:** \`${{ steps.build_iwa_example.outputs.iwa_bundle_id }}\`" >> "$GITHUB_OUTPUT"
+          echo "- **IWA Example Bundle ID:** \`${{ steps.build_iwa_example.outputs.iwa_url }}\`" >> "$GITHUB_OUTPUT"
           echo "$EOF_MARKER" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release

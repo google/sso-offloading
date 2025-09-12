@@ -29,26 +29,27 @@ if (process.env.NODE_ENV === 'production') {
   // Get the key and decrypt it to sign the web bundle
   const key = wbnSign.parsePemKey(
     process.env.KEY,
-    process.env.KEY_PASSPHRASE ?? ""
+    process.env.KEY_PASSPHRASE ?? ''
   );
 
   // Add the wbn bundle only during a production build
-  const iwaBundleId = new wbnSign.WebBundleId(key);
+  const iwaUrl = new wbnSign.WebBundleId(key)
+    .serializeWithIsolatedWebAppOrigin();
 
   // If running in a GitHub Actions environment, write the bundle ID to the step's output file.
   if (process.env.GITHUB_OUTPUT) {
-    fs.appendFileSync(
-      process.env.GITHUB_OUTPUT,
-      `iwa_bundle_id=${iwaBundleId}\n`
-    );
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `iwa_url=${iwaUrl}\n`);
   }
 
   plugins.push({
     ...wbn({
-      baseURL: iwaBundleId.serializeWithIsolatedWebAppOrigin(),
+      // Ensures the web bundle is signed as an isolated web app
+      baseURL: iwaUrl,
+      // Ensure that all content in the `public` directory is included in the web bundle
       static: {
         dir: 'public',
       },
+      // The name of the output web bundle
       output: 'simple-iwa-example.swbn',
       // This ensures the web bundle is signed with the key
       integrityBlockSign: {
