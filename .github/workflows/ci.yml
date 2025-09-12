@@ -118,16 +118,3 @@ jobs:
           retention-days: 7
           overwrite: true
 
-      - name: Generate update_manifest.xml content
-        id: generate_manifest
-        uses: ./.github/actions/generate-update-manifest-xml
-        with:
-          sso-extension-id: ${{ steps.package_sso_extension.outputs.crx-id }}
-          sso-extension-version: ${{ steps.sso_offloading_extension_version.outputs.version }}
-          chrome-app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
-          chrome-app-version: ${{ steps.chrome_app_version.outputs.version }}
-          repository: ${{ github.repository }}
-
-      - name: Log generated update_manifest.xml 
-        run: echo "${{ steps.generate_manifest.outputs.xml-content }}" 
-
