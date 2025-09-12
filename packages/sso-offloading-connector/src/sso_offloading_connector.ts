@@ -32,13 +32,13 @@ export interface SsoOffloadingConnector {
   stop: () => void;
 }
 
+// The official ID of the SSO Offloading Handler extension.
+const SSO_OFFLOADING_EXTENSION_ID = 'jmdcfpeebneidlbnldlhcifibpkidhkn';
+
 /**
  * Pings the extension to ensure it's active before starting.
  */
-const pingExtension = (
-  extensionId: string,
-  timeoutMs: number
-): Promise<void> => {
+const pingExtension = (timeoutMs: number): Promise<void> => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(
       () => reject(new CommunicationError(`Connection timed out.`)),
@@ -60,7 +60,7 @@ const pingExtension = (
     };
 
     chrome.runtime.sendMessage(
-      extensionId,
+      SSO_OFFLOADING_EXTENSION_ID,
       pingMessage,
       sendPingMessageCallback
     );
@@ -150,13 +150,11 @@ const createRequestListener = (
  * Creates an SSO connector for offloading authentication to a Chrome Extension.
  */
 export const createSsoOffloadingConnector = (
-  extensionId: string,
   target: any,
   requestFilter: RequestFilter,
   onInterceptError: (error: SsoOffloadingConnectorError) => void
 ): SsoOffloadingConnector => {
   if (
-    !extensionId ||
     !target ||
     !requestFilter?.urls?.length ||
     !onInterceptError
@@ -185,7 +183,7 @@ export const createSsoOffloadingConnector = (
       // handler will see an active flow and focus the existing auth tab
       // instead of creating a new one. We send this without a callback,
       // as the original request is still waiting for the final response.
-      chrome.runtime.sendMessage(extensionId, message);
+      chrome.runtime.sendMessage(SSO_OFFLOADING_EXTENSION_ID, message);
       return;
     }
 
@@ -211,19 +209,25 @@ export const createSsoOffloadingConnector = (
             updateSource(response.redirect_uri);
           }
           onInterceptError(
-            new SsoOffloadingExtensionResponseError(response.message
-            )
+            new SsoOffloadingExtensionResponseError(response.message)
           );
           break;
         default:
           onInterceptError(
-            new CommunicationError('Received unexpected response type from extension: ' + response?.type)
+            new CommunicationError(
+              'Received unexpected response type from extension: ' +
+                response?.type
+            )
           );
       }
     };
 
     try {
-      chrome.runtime.sendMessage(extensionId, message, sendMessageCallback);
+      chrome.runtime.sendMessage(
+        SSO_OFFLOADING_EXTENSION_ID,
+        message,
+        sendMessageCallback
+      );
     } catch (e) {
       isRequestInFlight = false;
       throw e;
@@ -238,7 +242,7 @@ export const createSsoOffloadingConnector = (
         throw new ConfigurationError('Connector is already started.');
       }
 
-      await pingExtension(extensionId, timeoutMs);
+      await pingExtension(timeoutMs);
       detachListenerOnStop = createRequestListener(
         target,
         finalFilter,
@@ -250,7 +254,7 @@ export const createSsoOffloadingConnector = (
       if (detachListenerOnStop) {
         detachListenerOnStop();
         // Tell the extension it should stop any unfinished SSO flow for this origin.
-        chrome.runtime.sendMessage(extensionId, {
+        chrome.runtime.sendMessage(SSO_OFFLOADING_EXTENSION_ID, {
           type: 'stop',
         } as SsoRequestMessage);
         detachListenerOnStop = null;

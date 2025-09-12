@@ -16,7 +16,6 @@
 import { createSsoOffloadingConnector } from 'sso-offloading-connector';
 
 const ssoForm = document.getElementById('ssoForm');
-const extensionIdInput = document.getElementById('extensionId');
 const authUrlInput = document.getElementById('authUrl');
 const enableSsoOffloadingButton = document.getElementById(
   'enableSsoOffloadingButton'
@@ -27,9 +26,7 @@ const stopSsoOffloadingButton = document.getElementById(
 const ssoWebview = document.getElementById('sso-webview');
 const statusContainer = document.getElementById('statusContainer');
 
-
 let ssoConnector = null;
-
 
 const handleInterceptError = (error) => {
   statusContainer.className = 'error';
@@ -39,7 +36,7 @@ const handleInterceptError = (error) => {
   `;
 };
 
-const setupSsoOffloading = async (extensionId, authUrl) => {
+const setupSsoOffloading = async (authUrl) => {
   if (ssoConnector) {
     ssoConnector.stop();
     ssoConnector = null;
@@ -49,14 +46,13 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
   statusContainer.textContent = 'Attempting to start SSO connector...';
 
   ssoConnector = createSsoOffloadingConnector(
-    extensionId,
     ssoWebview,
     {
       urls: [authUrl],
     },
     handleInterceptError
   );
-  
+
   await ssoConnector.start().then(() => {
     statusContainer.className = 'success';
     statusContainer.textContent = 'SSO connector started successfully.';
@@ -69,14 +65,14 @@ const setupSsoOffloading = async (extensionId, authUrl) => {
 ssoForm.addEventListener('submit', (event) => {
   event.preventDefault();
 
-  const extensionId = extensionIdInput.value;
   const authUrl = authUrlInput.value;
 
-  if (extensionId && authUrl) {
-    setupSsoOffloading(extensionId, authUrl);
+  if (authUrl) {
+    setupSsoOffloading(authUrl);
   } else {
     statusContainer.className = 'error';
-    statusContainer.textContent = 'Please enter both Extension ID and Auth URL.';
+    statusContainer.textContent =
+      'Please enter both Extension ID and Auth URL.';
   }
 });
 
@@ -86,12 +82,11 @@ stopSsoOffloadingButton.addEventListener('click', () => {
 });
 
 function updateButtonState() {
-  const isDisabled = !(extensionIdInput.value && authUrlInput.value);
+  const isDisabled = !authUrlInput.value;
   enableSsoOffloadingButton.disabled = isDisabled;
   stopSsoOffloadingButton.disabled = !ssoConnector;
 }
 
-extensionIdInput.addEventListener('input', updateButtonState);
 authUrlInput.addEventListener('input', updateButtonState);
 
 updateButtonState();

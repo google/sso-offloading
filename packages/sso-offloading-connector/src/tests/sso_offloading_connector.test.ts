@@ -41,7 +41,6 @@ describe('createSsoOffloadingConnector', () => {
     .mockReturnValue(mockInterceptor);
 
   let mockControlledFrame: any;
-  const extensionId = 'test-extension-id';
   const requestFilter = { urls: ['https://sso.example.com/*'] };
   const onSuccess = vi.fn();
   const onError = vi.fn();
@@ -63,7 +62,6 @@ describe('createSsoOffloadingConnector', () => {
     );
 
     const connector = createSsoOffloadingConnector(
-      extensionId,
       mockControlledFrame,
       requestFilter,
       onError
@@ -87,7 +85,7 @@ describe('createSsoOffloadingConnector', () => {
     });
 
     expect(mockSendMessage).toHaveBeenCalledWith(
-      extensionId,
+      'jmdcfpeebneidlbnldlhcifibpkidhkn',
       { type: 'sso_request', url: interceptedUrl },
       expect.any(Function)
     );
@@ -116,7 +114,6 @@ describe('createSsoOffloadingConnector', () => {
         cb({ type: 'pong' })
       );
       const connector = createSsoOffloadingConnector(
-        extensionId,
         mockControlledFrame,
         requestFilter,
         onError
@@ -140,7 +137,6 @@ describe('createSsoOffloadingConnector', () => {
 
   it('should fail to start if the extension does not respond to ping', async () => {
     const connector = createSsoOffloadingConnector(
-      extensionId,
       mockControlledFrame,
       requestFilter,
       onError
@@ -154,7 +150,6 @@ describe('createSsoOffloadingConnector', () => {
       cb({ type: 'pong' })
     );
     const connector = createSsoOffloadingConnector(
-      extensionId,
       mockControlledFrame,
       requestFilter,
       onError
