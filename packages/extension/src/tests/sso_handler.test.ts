@@ -104,4 +104,31 @@ describe('SSO Handler', () => {
       message: 'Request from an untrusted origin.',
     });
   });
+
+  it('should handle failure when creating an auth tab', async () => {
+    // Simulate failure for both ways of creating a tab
+    (mockChrome.windows.getLastFocused as Mock).mockRejectedValue(
+      new Error('No focused window')
+    );
+    (mockChrome.windows.create as Mock).mockRejectedValue(
+      new Error('Cannot create window')
+    );
+
+    handleExternalMessage(
+      { type: 'sso_request', url: ssoUrl },
+      trustedSender,
+      mockSendResponse
+    );
+
+    await vi.runAllTimersAsync();
+
+    expect(mockSendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'error',
+        message: expect.stringContaining(
+          'Error occured during SSO flow: Failed to create a new tab for SSO flow. Error: Cannot create window'
+        ),
+      })
+    );
+  });
 });
