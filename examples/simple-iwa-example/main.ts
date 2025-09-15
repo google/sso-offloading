@@ -23,7 +23,7 @@ const enableSsoOffloadingButton = document.getElementById(
 ) as HTMLButtonElement;
 const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement;
 const formValidationMessage = document.getElementById(
-  'form-validation-message'
+  'formValidationMessage'
 ) as HTMLDivElement;
 const authorizeApiButton = document.getElementById(
   'authorizeApiButton'
@@ -83,8 +83,7 @@ ssoForm.addEventListener('submit', (event) => {
 const resetSsoButton = () => {
   formValidationMessage.style.display = 'none';
   enableSsoOffloadingButton.disabled = true;
-    authorizeApiButton.disabled = true;
-
+  authorizeApiButton.disabled = true;
 };
 
 authUrlInput.addEventListener('input', resetSsoButton);
