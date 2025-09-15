@@ -71,6 +71,7 @@ ssoForm.addEventListener('submit', (event) => {
   const authUrl = authUrlInput.value;
   if (authUrl) {
     enableSsoOffloadingButton.disabled = false;
+    authorizeApiButton.disabled = false;
     formValidationMessage.style.display = 'none';
   } else {
     formValidationMessage.className = 'error';
@@ -82,6 +83,8 @@ ssoForm.addEventListener('submit', (event) => {
 const resetSsoButton = () => {
   formValidationMessage.style.display = 'none';
   enableSsoOffloadingButton.disabled = true;
+    authorizeApiButton.disabled = true;
+
 };
 
 authUrlInput.addEventListener('input', resetSsoButton);
@@ -115,19 +118,14 @@ const clickAuthorizeButtonInFrame = () => {
   if (typeof (ssoCf as any).executeScript === 'function') {
     try {
       (ssoCf as any).executeScript({ code: scriptToExecute });
-      console.log(
-        'Parent: Attempted to inject script to click authorize button.'
-      );
     } catch (e: any) {
       const errorMsg = `Error executing script: ${e.message}`;
-      console.error(errorMsg);
       formValidationMessage.textContent = errorMsg;
       formValidationMessage.className = 'error';
     }
   } else {
     const errorMsg =
       'Error: `(ssoCf as any).executeScript` is not a function. Programmatic cross-origin clicks are blocked by browser security.';
-    console.error(errorMsg);
     formValidationMessage.textContent = errorMsg;
     formValidationMessage.className = 'error';
     formValidationMessage.style.display = 'block';
