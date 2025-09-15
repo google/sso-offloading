@@ -25,6 +25,9 @@ const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement;
 const formValidationMessage = document.getElementById(
   'form-validation-message'
 ) as HTMLDivElement;
+const authorizeApiButton = document.getElementById(
+  'authorizeApiButton'
+) as HTMLButtonElement;
 
 let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null;
 
@@ -92,3 +95,43 @@ enableSsoOffloadingButton.addEventListener('click', () => {
     formValidationMessage.style.display = 'block';
   }
 });
+
+const clickAuthorizeButtonInFrame = () => {
+  const scriptToExecute = `
+    const button = document.getElementById('authorize-apis');
+    if (button) {
+      button.click();
+      console.log('In-frame script: Clicked #authorize-apis button.');
+    } else {
+      console.error('In-frame script: Could not find #authorize-apis button.');
+    }
+  `;
+
+  formValidationMessage.textContent =
+    'Attempting to click "Authorize APIs" button inside frame...';
+  formValidationMessage.className = 'success';
+  formValidationMessage.style.display = 'block';
+
+  if (typeof (ssoCf as any).executeScript === 'function') {
+    try {
+      (ssoCf as any).executeScript({ code: scriptToExecute });
+      console.log(
+        'Parent: Attempted to inject script to click authorize button.'
+      );
+    } catch (e: any) {
+      const errorMsg = `Error executing script: ${e.message}`;
+      console.error(errorMsg);
+      formValidationMessage.textContent = errorMsg;
+      formValidationMessage.className = 'error';
+    }
+  } else {
+    const errorMsg =
+      'Error: `(ssoCf as any).executeScript` is not a function. Programmatic cross-origin clicks are blocked by browser security.';
+    console.error(errorMsg);
+    formValidationMessage.textContent = errorMsg;
+    formValidationMessage.className = 'error';
+    formValidationMessage.style.display = 'block';
+  }
+};
+
+authorizeApiButton.addEventListener('click', clickAuthorizeButtonInFrame);
