@@ -25,6 +25,9 @@ const ssoCf = document.getElementById('ssoCf') as HTMLIFrameElement;
 const formValidationMessage = document.getElementById(
   'form-validation-message'
 ) as HTMLDivElement;
+const authorizeApiButton = document.getElementById(
+  'authorizeApiButton'
+) as HTMLButtonElement;
 
 let ssoConnector: ReturnType<typeof createSsoOffloadingConnector> | null = null;
 
@@ -68,6 +71,7 @@ ssoForm.addEventListener('submit', (event) => {
   const authUrl = authUrlInput.value;
   if (authUrl) {
     enableSsoOffloadingButton.disabled = false;
+    authorizeApiButton.disabled = false;
     formValidationMessage.style.display = 'none';
   } else {
     formValidationMessage.className = 'error';
@@ -79,6 +83,8 @@ ssoForm.addEventListener('submit', (event) => {
 const resetSsoButton = () => {
   formValidationMessage.style.display = 'none';
   enableSsoOffloadingButton.disabled = true;
+    authorizeApiButton.disabled = true;
+
 };
 
 authUrlInput.addEventListener('input', resetSsoButton);
@@ -92,3 +98,38 @@ enableSsoOffloadingButton.addEventListener('click', () => {
     formValidationMessage.style.display = 'block';
   }
 });
+
+const clickAuthorizeButtonInFrame = () => {
+  const scriptToExecute = `
+    const authButton = document.getElementById('authorizeApisButton');
+    if (authButton) {
+      authButton.click();
+      console.log('In-frame script: Clicked #authorize-apis button.');
+    } else {
+      console.error('In-frame script: Could not find #authorize-apis button.');
+    }
+  `;
+
+  formValidationMessage.textContent =
+    'Attempting to click "Authorize APIs" button inside frame...';
+  formValidationMessage.className = 'success';
+  formValidationMessage.style.display = 'block';
+
+  if (typeof (ssoCf as any).executeScript === 'function') {
+    try {
+      (ssoCf as any).executeScript({ code: scriptToExecute });
+    } catch (e: any) {
+      const errorMsg = `Error executing script: ${e.message}`;
+      formValidationMessage.textContent = errorMsg;
+      formValidationMessage.className = 'error';
+    }
+  } else {
+    const errorMsg =
+      'Error: `(ssoCf as any).executeScript` is not a function. Programmatic cross-origin clicks are blocked by browser security.';
+    formValidationMessage.textContent = errorMsg;
+    formValidationMessage.className = 'error';
+    formValidationMessage.style.display = 'block';
+  }
+};
+
+authorizeApiButton.addEventListener('click', clickAuthorizeButtonInFrame);
