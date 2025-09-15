@@ -33,28 +33,47 @@ class AuthFlowError extends Error {
 }
 
 // Finds the last focused window or creates a new one for the auth flow.
-const getOrCreateAuthTab = async (
+const createAuthTab = async (
   url: URL
 ): Promise<{ tabId: number; windowId: number } | undefined> => {
+  return getLastFocusedWindow(url)
+    .catch(() => {
+      return createNewWindow(url);
+    })
+    .catch((e) => {
+      throw new Error('Failed to create a new tab for SSO flow. ' + e);
+    });
+};
+
+const getLastFocusedWindow = async (
+  url: URL
+): Promise<{ tabId: number; windowId: number }> => {
   const lastFocusedWindow = await chrome.windows.getLastFocused({
     windowTypes: ['normal'],
   });
 
-  if (lastFocusedWindow?.id) {
-    const newTab = await chrome.tabs.create({
-      windowId: lastFocusedWindow.id,
-      url: url.toString(),
-      active: true,
-    });
-    // Bring window to the front.
-    await chrome.windows.update(lastFocusedWindow.id, { focused: true });
-
-    if (newTab.id) {
-      return { tabId: newTab.id, windowId: lastFocusedWindow.id };
-    }
+  if (!lastFocusedWindow?.id) {
+    throw new Error('No last focused window found.');
   }
 
-  // Fallback: No suitable window was found, so create a new one.
+  const newTab = await chrome.tabs.create({
+    windowId: lastFocusedWindow.id,
+    url: url.toString(),
+    active: true,
+  });
+
+  await chrome.windows.update(lastFocusedWindow.id, { focused: true });
+
+  if (!newTab.id) {
+    throw new Error('Tab was created but did not return an ID.');
+  }
+
+  return { tabId: newTab.id, windowId: lastFocusedWindow.id };
+};
+
+const createNewWindow = async (
+  url: URL
+): Promise<{ tabId: number; windowId: number }> => {
   const newWindow = await chrome.windows.create({
     url: url.toString(),
     type: 'normal',
@@ -62,9 +81,14 @@ const getOrCreateAuthTab = async (
   });
 
   const newTabId = newWindow?.tabs?.[0]?.id;
+
   if (newTabId && newWindow.id) {
     return { tabId: newTabId, windowId: newWindow.id };
   }
+
+  throw new Error(
+    'Window creation failed to return window or tab ID.'
+  );
 };
 
 /**
@@ -139,7 +163,7 @@ async function processSsoFlow(
     const expectedRedirectUrl =
       ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin;
 
-    const authInfo = await getOrCreateAuthTab(ssoUrl);
+    const authInfo = await createAuthTab(ssoUrl);
 
     if (!authInfo) {
       throw new Error('Failed to create a valid authentication tab.');

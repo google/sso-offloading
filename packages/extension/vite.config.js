@@ -19,7 +19,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
   build: {
     lib: {
-      entry: 'src/service_worker.ts', 
+      entry: 'src/service_worker.ts',
       name: 'service_worker',
       fileName: 'service_worker',
       formats: ['es'],
@@ -28,17 +28,23 @@ export default defineConfig({
       output: {
         entryFileNames: `service_worker.js`,
         chunkFileNames: `service_worker.js`,
-      }
-    }
+      },
+    },
+  },
+  test: {
+    watchExclude: [
+      '**/node_modules/**', 
+      '**/dist/**'
+    ],
   },
   plugins: [
     viteStaticCopy({
       targets: [
         {
           src: 'src/manifest.json',
-          dest: '.'
-        }
-      ]
-    })
-  ]
+          dest: '.',
+        },
+      ],
+    }),
+  ],
 });
