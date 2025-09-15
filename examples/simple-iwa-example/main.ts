@@ -98,9 +98,9 @@ enableSsoOffloadingButton.addEventListener('click', () => {
 
 const clickAuthorizeButtonInFrame = () => {
   const scriptToExecute = `
-    const button = document.getElementById('authorize-apis');
-    if (button) {
-      button.click();
+    const authButton = document.getElementById('authorizeApisButton');
+    if (authButton) {
+      authButton.click();
       console.log('In-frame script: Clicked #authorize-apis button.');
     } else {
       console.error('In-frame script: Could not find #authorize-apis button.');
