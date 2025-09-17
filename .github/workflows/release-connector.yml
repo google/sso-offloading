@@ -24,9 +24,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write 
-      packages: write 
-    
+      contents: write
+      packages: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,10 +49,10 @@ jobs:
       - name: Build Connector
         run: pnpm --filter sso-offloading-connector run build
 
-    #   - name: Publish Connector to NPM
-    #     run: pnpm --filter sso-offloading-connector publish --no-git-checks
-    #     env:
-    #       NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }} 
+      # - name: Publish Connector to NPM
+      #   run: pnpm --filter sso-offloading-connector publish --no-git-checks
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Get all tags (for IWA manifest)
         uses: octokit/request-action@v2.x
@@ -61,7 +61,7 @@ jobs:
           route: GET /repos/${{ github.repository }}/git/matching-refs/tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Bump IWA version and create iwa-update-manifest.json
         run: pnpm run bump:iwa
         env:
@@ -98,11 +98,11 @@ jobs:
         id: generate_app_manifest
         uses: ./.github/actions/generate-update-manifest-xml
         with:
-            app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
-            app-version: ${{ env.VERSION }}
-            crx-filename: 'chrome-app.crx'
-            repository: ${{ github.repository }}
-            github-tag: ${{ github.ref_name }} 
+          app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
+          app-version: ${{ env.VERSION }}
+          crx-filename: 'chrome-app.crx'
+          repository: ${{ github.repository }}
+          github-tag: ${{ github.ref_name }}
 
       - name: Write Chrome App update_manifest.xml
         run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome_app_update_manifest.xml

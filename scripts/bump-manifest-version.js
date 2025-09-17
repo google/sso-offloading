@@ -22,15 +22,12 @@ if (!manifestPath) {
   process.exit(1);
 }
 
-// Get version from the environment variable
-const newVersionTag = process.env.VERSION;
-if (!newVersionTag) {
-  console.error('Error: VERSION environment variable not set.');
-  process.exit(1);
+const releaseTag = process.env.TAG;
+if (!releaseTag) {
+  throw new Error('TAG environment variable not set.');
 }
 
-// Remove 'v' prefix if it exists (e.g., v1.2.3 -> 1.2.3)
-const newVersion = newVersionTag.replace('v', '');
+const newVersion = releaseTag.replace('connector-', '').replace('extension-', '');
 
 try {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
