@@ -1,0 +1,97 @@
+name: Release Connector and Apps
+
+on:
+  push:
+    tags:
+      - 'connector@*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+      packages: write 
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          # This strips "connector@" from the tag "connector@1.2.0" and leaves "1.2.0"
+          VERSION=$(echo ${{ github.ref_name }} | cut -d '@' -f 2)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build Connector
+        run: pnpm --filter sso-offloading-connector run build
+
+    #   - name: Publish Connector to NPM
+    #     run: pnpm --filter sso-offloading-connector publish --no-git-checks
+    #     env:
+    #       NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }} 
+
+      - name: Get all tags (for IWA manifest)
+        uses: octokit/request-action@v2.x
+        id: get_all_tags
+        with:
+          route: GET /repos/${{ github.repository }}/git/matching-refs/tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Bump IWA version and create iwa-update-manifest.json
+        run: pnpm run bump:iwa
+        env:
+          VERSION: ${{ env.VERSION }}
+          ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
+
+      - name: Build IWA example
+        id: build_iwa_example
+        run: pnpm run build:iwa
+        env:
+          KEY: ${{ secrets.IWA_KEY }}
+          KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
+
+      - name: Bump Chrome App version
+        run: pnpm run bump:chrome-app
+        env:
+          VERSION: ${{ env.VERSION }}
+
+      - name: Build Chrome App example
+        run: pnpm run build:chrome-app
+
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Package Chrome App
+        id: package_chrome_app
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.CHROME_APP_KEY }}
+          input-dir: examples/chrome-app-example/chrome-app
+          name: chrome-app
+
+      - name: Create GitHub Release for Connector
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          artifacts: |
+            examples/simple-iwa-example/dist/simple-iwa-example.swbn
+            ${{ steps.package_chrome_app.outputs.crx-name }}
+            ./iwa-update-manifest.json
