@@ -1,9 +1,23 @@
+# Copyright 2025 Google LLC
+
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+
+#        https://www.apache.org/licenses/LICENSE-2.0
+
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 name: Release Connector and Apps
 
 on:
   push:
     tags:
-      - 'connector@*'
+      - 'connector-*'
 
 jobs:
   release:
@@ -15,13 +29,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Get version from tag
-        id: get_version
-        run: |
-          # This strips "connector@" from the tag "connector@1.2.0" and leaves "1.2.0"
-          VERSION=$(echo ${{ github.ref_name }} | cut -d '@' -f 2)
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v3
@@ -57,7 +64,7 @@ jobs:
       - name: Bump IWA version and create iwa-update-manifest.json
         run: pnpm run bump:iwa
         env:
-          VERSION: ${{ env.VERSION }}
+          TAG: ${{ github.ref_name }}
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
@@ -86,6 +93,19 @@ jobs:
           input-dir: examples/chrome-app-example/chrome-app
           name: chrome-app
 
+      - name: Generate Chrome App update_manifest.xml
+        id: generate_app_manifest
+        uses: ./.github/actions/generate-update-manifest-xml
+        with:
+            app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
+            app-version: ${{ env.VERSION }}
+            crx-filename: 'chrome-app.crx'
+            repository: ${{ github.repository }}
+            github-tag: ${{ github.ref_name }} 
+
+      - name: Write Chrome App update_manifest.xml
+        run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome_app_update_manifest.xml
+
       - name: Create GitHub Release for Connector
         uses: ncipollo/release-action@v1
         with:
@@ -95,3 +115,4 @@ jobs:
             examples/simple-iwa-example/dist/simple-iwa-example.swbn
             ${{ steps.package_chrome_app.outputs.crx-name }}
             ./iwa-update-manifest.json
+            ./chrome_app_update_manifest.xml

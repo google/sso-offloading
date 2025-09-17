@@ -1,3 +1,19 @@
+/*
+ Copyright 2025 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+       https://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ */
+
 import fs from 'fs';
 
 const MANIFEST_PATH =
@@ -5,12 +21,12 @@ const MANIFEST_PATH =
 const UPDATE_JSON_PATH = './iwa-update-manifest.json';
 const ARTIFACT_NAME = 'simple-iwa-example.swbn';
 
-// Bump the version in the main manifest.webmanifest
-const newVersionTag = process.env.VERSION;
-if (!newVersionTag) {
-  throw new Error('VERSION environment variable not set.');
+const releaseTag = process.env.TAG;
+if (!releaseTag) {
+  throw new Error('TAG environment variable not set.');
 }
-const newVersion = newVersionTag.replace('v', '');
+
+const newVersion = releaseTag.replace('connector-', '');
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
 manifest.version = newVersion;
@@ -33,14 +49,13 @@ if (tagsJson) {
 }
 
 // Add the newly generated tag to the list if it's not already there
-if (!allTags.includes(newVersionTag)) {
-  allTags.push(newVersionTag);
+if (!allTags.includes(releaseTag)) {
+  allTags.push(releaseTag);
 }
 
 const versions = allTags.map((tag) => {
-  const version = tag.replace('v', '');
   return {
-    version: version,
+    version: tag.replace('connector-', ''),
     src: `https://github.com/google/sso-offloading/releases/download/${tag}/${ARTIFACT_NAME}`,
   };
 });

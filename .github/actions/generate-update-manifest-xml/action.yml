@@ -5,7 +5,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 
-#        https://www.apache.org/licenses/LICENSE-2.0
+#        https://www.apache.org/licenses/LICENSE-2.0
 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,21 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 'Generate XML Manifest'
-description: 'Generates the content for update_manifest.xml with new versions and CRX details.'
+name: 'Generate Update Manifest XML'
+description: 'Generates the content for update_manifest.xml for a single app/extension.'
 
 inputs:
-  sso-extension-id:
-    description: 'The ID of the SSO Offloading Extension.'
+  app-id:
+    description: 'The ID of the app or extension.'
     required: true
-  chrome-app-id:
-    description: 'The ID of the Chrome App.'
+  app-version:
+    description: 'The version of the app or extension.'
     required: true
-  chrome-app-version:
-    description: 'The version of the Chrome App.'
-    required: true
-  sso-extension-version:
-    description: 'The version of the SSO Offloading Extension.'
+  crx-filename:
+    description: 'The filename of the .crx file (e.g., sso-offloading-extension.crx)'
     required: true
   repository:
     description: 'The GitHub repository (owner/repo).'
@@ -52,15 +49,10 @@ runs:
         EOF_MARKER=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 16)
         echo "content<<$EOF_MARKER" >> $GITHUB_OUTPUT
         cat <<'EOF' >> $GITHUB_OUTPUT
-        <?xml version=\"1.0\" encoding=\"UTF-8\"?>
-        <gupdate xmlns=\"http://www.google.com/update2/response\" protocol=\"2.0\">
-          <!-- SSO Offloading Extension -->
-          <app appid=\"${{ inputs.sso-extension-id }}\">
-            <updatecheck codebase=\"https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/sso-offloading-extension.crx\" version=\"${{ inputs.sso-extension-version }}\"/>
-          </app>
-          <!-- Chrome App -->
-          <app appid=\"${{ inputs.chrome-app-id }}\">
-            <updatecheck codebase=\"https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/chrome-app.crx\" version=\"${{ inputs.chrome-app-version }}\"/>
+        <?xml version="1.0" encoding="UTF-8"?>
+        <gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+          <app appid="${{ inputs.app-id }}">
+            <updatecheck codebase="https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/${{ inputs.crx-filename }}" version="${{ inputs.app-version }}"/>
           </app>
         </gupdate>
         EOF

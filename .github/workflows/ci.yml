@@ -54,16 +54,10 @@ jobs:
           KEY: ${{ secrets.IWA_KEY }}
           KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
 
-      - name: Get IWA version
-        id: iwa_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: examples/simple-iwa-example/public/.well-known/manifest.webmanifest
-
       - name: Upload IWA Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: iwa-dev-build-${{ steps.iwa_version.outputs.version }}
+          name: simple-iwa-example
           path: examples/simple-iwa-example/dist/simple-iwa-example.swbn
           overwrite: true
 
@@ -72,12 +66,6 @@ jobs:
 
       - name: Install Google Chrome
         uses: browser-actions/setup-chrome@v1
-
-      - name: Get Chrome App Version
-        id: chrome_app_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: examples/chrome-app-example/manifest.json
 
       - name: Package Chrome App
         id: package_chrome_app
@@ -90,16 +78,10 @@ jobs:
       - name: Upload Chrome App .crx Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chrome-app-build-${{ steps.chrome_app_version.outputs.version }}
+          name: chrome-app-build
           path: ${{ steps.package_chrome_app.outputs.crx-name }}
           retention-days: 7
           overwrite: true
-
-      - name: Get SSO Offloading Extension Version
-        id: sso_offloading_extension_version
-        uses: ./.github/actions/get-version
-        with:
-          manifest-path: packages/extension/dist/manifest.json
 
       - name: Package SSO Offloading Extension
         id: package_sso_extension
@@ -112,7 +94,7 @@ jobs:
       - name: Upload SSO Offloading Extension .crx Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: sso-offloading-extension-${{ steps.sso_offloading_extension_version.outputs.version }}
+          name: sso-offloading-extension
           path: ${{ steps.package_sso_extension.outputs.crx-name }}
           retention-days: 7
           overwrite: true
