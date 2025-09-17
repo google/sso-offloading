@@ -1,0 +1,62 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - 'extension@*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write 
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          # This strips "extension@" from the tag "extension@0.5.0" and leaves "0.5.0"
+          VERSION=$(echo ${{ github.ref_name }} | cut -d '@' -f 2)
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Bump SSO Extension version
+        run: pnpm run bump:extension
+        env:
+          VERSION: ${{ env.VERSION }}
+          
+      - name: Install Google Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Package SSO Offloading Extension
+        id: package_sso_extension
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.SSO_EXTENSION_KEY }}
+          input-dir: packages/extension/dist
+          name: sso-offloading-extension
+
+      - name: Create GitHub Release for Extension
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          artifacts: |
+            ${{ steps.package_sso_extension.outputs.crx-name }}
