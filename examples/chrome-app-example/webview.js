@@ -23,6 +23,9 @@ const enableSsoOffloadingButton = document.getElementById(
 const stopSsoOffloadingButton = document.getElementById(
   'stopSsoOffloadingButton'
 );
+const authorizeApiButton = document.getElementById(
+  'authorizeApiButton'
+);
 const ssoWebview = document.getElementById('sso-webview');
 const statusContainer = document.getElementById('statusContainer');
 
@@ -60,6 +63,7 @@ const setupSsoOffloading = async (authUrl) => {
 
   stopSsoOffloadingButton.disabled = false;
   enableSsoOffloadingButton.disabled = true;
+  authorizeApiButton.disabled = false;
 };
 
 ssoForm.addEventListener('submit', (event) => {
@@ -79,14 +83,48 @@ ssoForm.addEventListener('submit', (event) => {
 stopSsoOffloadingButton.addEventListener('click', () => {
   ssoConnector.stop();
   ssoConnector = null;
+  updateButtonState();
 });
 
 function updateButtonState() {
   const isDisabled = !authUrlInput.value;
   enableSsoOffloadingButton.disabled = isDisabled;
   stopSsoOffloadingButton.disabled = !ssoConnector;
+  authorizeApiButton.disabled = !ssoConnector;
 }
 
 authUrlInput.addEventListener('input', updateButtonState);
+
+const clickAuthorizeButtonInWebview = () => {
+  const scriptToExecute = `
+    const authButton = document.getElementById('authorizeApisButton');
+    if (authButton) {
+      authButton.click();
+      console.log('In-webview script: Clicked #authorizeApisButton button.');
+    } else {
+      console.error('In-webview script: Could not find #authorizeApisButton button.');
+    }
+  `;
+
+  statusContainer.className = 'info';
+  statusContainer.textContent =
+    'Attempting to click "Authorize APIs" button inside webview...';
+
+  try {
+    ssoWebview.executeScript({ code: scriptToExecute }, (results) => {
+      if (chrome.runtime.lastError) {
+        const errorMsg = `Error executing script: ${chrome.runtime.lastError.message}`;
+        statusContainer.textContent = errorMsg;
+        statusContainer.className = 'error';
+      }
+    });
+  } catch (e) {
+    const errorMsg = `Error executing script: ${e.message}`;
+    statusContainer.textContent = errorMsg;
+    statusContainer.className = 'error';
+  }
+};
+
+authorizeApiButton.addEventListener('click', clickAuthorizeButtonInWebview);
 
 updateButtonState();
