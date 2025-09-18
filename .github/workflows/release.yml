@@ -1,31 +1,31 @@
 # Copyright 2025 Google LLC
-
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-
+#
 #        https://www.apache.org/licenses/LICENSE-2.0
-
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Release Connector and Apps
+name: Unified Release
 
 on:
   push:
     tags:
-      - 'connector-*'
+      - 'v*.*.*' 
   workflow_dispatch:
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
+      contents: write   
+      packages: write 
 
     steps:
       - name: Checkout
@@ -46,22 +46,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Extract version from tag
-        id: extract_version
+      - name: Extract SDK version from tag
+        id: extract_sdk_version
         run: |
           VERSION_TAG="${{ github.ref_name }}"
-          # This shell command removes the "connector-" prefix
-          VERSION=${VERSION_TAG#connector-}
+          # This shell command removes the "v" prefix (e.g., v1.2.0 -> 1.2.0)
+          VERSION=${VERSION_TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+      - name: Extract Extension version from file
+        id: extract_ext_version
+        run: |
+          # Reads version from the extension's package.json for independent versioning
+          EXT_VERSION=$(jq -r .version packages/extension/package.json)
+          echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
+
+      # --- Build All Components ---
+      
+      - name: Build SSO Extension
+        run: pnpm run build:extension
 
       - name: Build SSO Offloading Connector
         run: pnpm --filter sso-offloading-connector run build
-
-      # - name: Publish Connector to NPM
-      #   run: pnpm --filter sso-offloading-connector publish --no-git-checks
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
-
+        
+      # --- IWA and Chrome App Steps ---
+      
       - name: Get all tags (for IWA manifest)
         uses: octokit/request-action@v2.x
         id: get_all_tags
@@ -74,7 +83,7 @@ jobs:
         run: pnpm run bump:iwa
         env:
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.extract_version.outputs.version }}
+          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
@@ -87,13 +96,23 @@ jobs:
       - name: Bump Chrome App version
         run: pnpm run bump:chrome-app
         env:
-          VERSION: ${{ steps.extract_version.outputs.version }}
+          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
+        
+      # --- Package All Components ---
 
-      - name: Install Google Chrome needed for Chrome App packaging
+      - name: Install Google Chrome
         uses: browser-actions/setup-chrome@v1
+
+      - name: Package SSO Offloading Extension
+        id: package_sso_extension
+        uses: ./.github/actions/pack-crx
+        with:
+          key: ${{ secrets.SSO_EXTENSION_KEY }}
+          input-dir: packages/extension/dist
+          name: sso-offloading-extension
 
       - name: Package Chrome App
         id: package_chrome_app
@@ -102,27 +121,46 @@ jobs:
           key: ${{ secrets.CHROME_APP_KEY }}
           input-dir: examples/chrome-app-example/chrome-app
           name: chrome-app
+          
+      # --- Generate All Manifests ---
 
-      - name: Generate Chrome App update_manifest.xml
+      - name: Generate Extension update-manifest.xml
+        id: generate_extension_manifest
+        uses: ./.github/actions/generate-update-manifest-xml
+        with:
+          app-id: ${{ steps.package_sso_extension.outputs.crx-id }}
+          app-version: ${{ steps.extract_ext_version.outputs.version }} 
+          crx-filename: 'sso-offloading-extension.crx'
+          repository: ${{ github.repository }}
+          github-tag: ${{ github.ref_name }}
+
+      - name: Write Extension update-manifest.xml
+        run: echo "${{ steps.generate_extension_manifest.outputs.xml-content }}" > extension-update-manifest.xml
+
+      - name: Generate Chrome App update-manifest.xml
         id: generate_app_manifest
         uses: ./.github/actions/generate-update-manifest-xml
         with:
           app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
-          app-version: ${{ steps.extract_version.outputs.version }}
+          app-version: ${{ steps.extract_sdk_version.outputs.version }} 
           crx-filename: 'chrome-app.crx'
           repository: ${{ github.repository }}
           github-tag: ${{ github.ref_name }}
 
-      - name: Write Chrome App update_manifest.xml
-        run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome_app_update_manifest.xml
+      - name: Write Chrome App update-manifest.xml
+        run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome-app-update-manifest.xml
 
-      - name: Create GitHub Release for Connector
+      # --- Create Single GitHub Release with All Artifacts ---
+      
+      - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           artifacts: |
+            ${{ steps.package_sso_extension.outputs.crx-name }}
+            ./extension-update-manifest.xml
             examples/simple-iwa-example/dist/simple-iwa-example.swbn
             ${{ steps.package_chrome_app.outputs.crx-name }}
             ./iwa-update-manifest.json
-            ./chrome_app_update_manifest.xml
+            ./chrome-app-update-manifest.xml
