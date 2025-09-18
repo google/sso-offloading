@@ -54,7 +54,7 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
       
       - name: Build SSO Extension
-        run: pnpm --filter extension run build
+        run: pnpm run build:extension
         
       - name: Bump SSO Extension version
         run: pnpm run bump:extension
