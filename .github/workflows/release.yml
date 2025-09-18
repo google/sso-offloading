@@ -62,7 +62,6 @@ jobs:
           echo "version=$EXT_VERSION" >> $GITHUB_OUTPUT
 
       # --- Build All Components ---
-      
       - name: Build SSO Extension
         run: pnpm run build:extension
 
@@ -70,7 +69,6 @@ jobs:
         run: pnpm --filter sso-offloading-connector run build
         
       # --- IWA and Chrome App Steps ---
-      
       - name: Get all tags (for IWA manifest)
         uses: octokit/request-action@v2.x
         id: get_all_tags
@@ -102,7 +100,6 @@ jobs:
         run: pnpm run build:chrome-app
         
       # --- Package All Components ---
-
       - name: Install Google Chrome
         uses: browser-actions/setup-chrome@v1
 
@@ -123,7 +120,6 @@ jobs:
           name: chrome-app
           
       # --- Generate All Manifests ---
-
       - name: Generate Extension update-manifest.xml
         id: generate_extension_manifest
         uses: ./.github/actions/generate-update-manifest-xml
@@ -150,13 +146,18 @@ jobs:
       - name: Write Chrome App update-manifest.xml
         run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome-app-update-manifest.xml
 
-      # --- Create Single GitHub Release with All Artifacts ---
-      
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
+          body: |
+            ## Release Components & Versions
+
+            * **SSO Offloading Connector (SDK):** `v${{ steps.extract_sdk_version.outputs.version }}`
+            * **SSO Offloading Extension:** `v${{ steps.extract_ext_version.outputs.version }}`
+            * **IWA Example:** `v${{ steps.extract_sdk_version.outputs.version }}`
+            * **Chrome App Example:** `v${{ steps.extract_sdk_version.outputs.version }}`
           artifacts: |
             ${{ steps.package_sso_extension.outputs.crx-name }}
             ./extension-update-manifest.xml
