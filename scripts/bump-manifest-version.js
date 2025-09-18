@@ -22,12 +22,10 @@ if (!manifestPath) {
   process.exit(1);
 }
 
-const releaseTag = process.env.TAG;
-if (!releaseTag) {
-  throw new Error('TAG environment variable not set.');
+const newVersion = process.env.VERSION;
+if (!newVersion) {
+  throw new Error('VERSION environment variable not set.');
 }
-
-const newVersion = releaseTag.replace('connector-', '').replace('extension-', '');
 
 try {
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));

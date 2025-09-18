@@ -46,7 +46,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Build Connector
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          VERSION_TAG="${{ github.ref_name }}"
+          # This shell command removes the "connector-" prefix
+          VERSION=${VERSION_TAG#connector-}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build SSO Offloading Connector
         run: pnpm --filter sso-offloading-connector run build
 
       # - name: Publish Connector to NPM
@@ -66,6 +74,7 @@ jobs:
         run: pnpm run bump:iwa
         env:
           TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.extract_version.outputs.version }}
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
@@ -78,12 +87,12 @@ jobs:
       - name: Bump Chrome App version
         run: pnpm run bump:chrome-app
         env:
-          TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.extract_version.outputs.version }}
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
 
-      - name: Install Google Chrome
+      - name: Install Google Chrome needed for Chrome App packaging
         uses: browser-actions/setup-chrome@v1
 
       - name: Package Chrome App
@@ -99,7 +108,7 @@ jobs:
         uses: ./.github/actions/generate-update-manifest-xml
         with:
           app-id: ${{ steps.package_chrome_app.outputs.crx-id }}
-          app-version: ${{ env.VERSION }}
+          app-version: ${{ steps.extract_version.outputs.version }}
           crx-filename: 'chrome-app.crx'
           repository: ${{ github.repository }}
           github-tag: ${{ github.ref_name }}

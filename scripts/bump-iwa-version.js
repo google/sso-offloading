@@ -26,7 +26,10 @@ if (!releaseTag) {
   throw new Error('TAG environment variable not set.');
 }
 
-const newVersion = releaseTag.replace('connector-', '');
+const newVersion = process.env.VERSION;
+if(!newVersion){
+  throw new Error('VERSION environment variable not set.');
+}
 
 const manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf-8'));
 manifest.version = newVersion;

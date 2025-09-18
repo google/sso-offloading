@@ -45,10 +45,18 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Extract version from tag
+        id: extract_version
+        run: |
+          VERSION_TAG="${{ github.ref_name }}"
+          # This shell command removes the "extension-" prefix
+          VERSION=${VERSION_TAG#extension-}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Bump SSO Extension version
         run: pnpm run bump:extension
         env:
-          VERSION: ${{ env.VERSION }}
+          VERSION: ${{ steps.extract_version.outputs.version }}
 
       - name: Install Google Chrome
         uses: browser-actions/setup-chrome@v1
@@ -66,7 +74,7 @@ jobs:
         uses: ./.github/actions/generate-update-manifest-xml
         with:
           app-id: ${{ steps.package_sso_extension.outputs.crx-id }}
-          app-version: ${{ env.VERSION }}
+          app-version: ${{ steps.extract_version.outputs.version }}
           crx-filename: 'sso-offloading-extension.crx'
           repository: ${{ github.repository }}
           github-tag: ${{ github.ref_name }}
