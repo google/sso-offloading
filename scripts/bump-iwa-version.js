@@ -58,7 +58,7 @@ if (!allTags.includes(releaseTag)) {
 
 const versions = allTags.map((tag) => {
   return {
-    version: tag.replace('connector-', ''),
+    version: tag.replace('v', ''),
     src: `https://github.com/google/sso-offloading/releases/download/${tag}/${ARTIFACT_NAME}`,
   };
 });
