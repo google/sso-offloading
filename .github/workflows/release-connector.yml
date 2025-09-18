@@ -78,7 +78,7 @@ jobs:
       - name: Bump Chrome App version
         run: pnpm run bump:chrome-app
         env:
-          VERSION: ${{ env.VERSION }}
+          TAG: ${{ github.ref_name }}
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
