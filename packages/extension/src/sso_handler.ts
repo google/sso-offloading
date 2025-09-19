@@ -202,6 +202,7 @@ async function processSsoFlow(
 
 const isSsoRequestValid = (sender: chrome.runtime.MessageSender): boolean => {
   const flowId = sender.origin;
+  console.log(flowId);
   return !!flowId && flowId in trustedClients;
 };
 
