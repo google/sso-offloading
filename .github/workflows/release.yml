@@ -12,7 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unified Release
+# To make a release: 
+# Update SDK version (and extension version, if anything was changed there too). 
+# Then, create a GitHub tag on the last commit that should be included in the 
+# release (only tags on main branch are eligible for release).
+# Example apps follow the SDK (SSO Offloading Connector) versioning. 
+# The extension has its own version.
+
+name: Release
 
 on:
   push:
