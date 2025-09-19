@@ -142,7 +142,10 @@ describe('createSsoOffloadingConnector', () => {
       onError
     );
 
-    await expect(connector.start()).rejects.toThrow(CommunicationError);
+    const testTimeout = 1000; 
+    await expect(connector.start(testTimeout)).rejects.toThrow(
+      CommunicationError
+    );
   });
 
   it('should prevent starting if already started', async () => {

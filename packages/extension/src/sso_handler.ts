@@ -19,7 +19,10 @@ import trustedClients from './trusted_clients.json';
 const REDIRECT_URI_PARAM = 'redirect_uri';
 const activeFlows = new Map<string, { tabId: number; windowId: number }>();
 
+// Timeout for the entire SSO flow in milliseconds (2 minutes).
 const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000;
+// Interval to keep the service worker alive, should be less than 30s.
+const KEEP_ALIVE_INTERVAL_MS = 20 * 1000;
 
 class AuthFlowError extends Error {
   redirect_uri?: string;
@@ -181,9 +184,6 @@ async function processSsoFlow(
     // Save the cleanup function to ensure it runs in the `finally` block.
     cleanupListeners = cleanup;
 
-    // Wait for the user to finish logging in, which resolves the promise
-    // and provides the final URL.
-    const capturedUrl = await redirectPromise;
     const timeoutPromise = new Promise<string>((_, reject) =>
       setTimeout(
         () => reject(new AuthFlowError('The SSO flow has timed out.')),
@@ -191,12 +191,12 @@ async function processSsoFlow(
       )
     );
 
-    sendResponse({ type: 'success', redirect_uri: capturedUrl });
     // Wait for either the user to finish the flow or for the timeout to occur.
     const finalUrl = await Promise.race([redirectPromise, timeoutPromise]);
 
     sendResponse({ type: 'success', redirect_uri: finalUrl });
   } catch (error: any) {
+    // If an error occurs (e.g., timeout, user cancellation), send an error response.
     sendResponse({
       type: 'error',
       message: 'Error occured during SSO flow: ' + error.message,
@@ -272,8 +272,24 @@ const handleExternalMessage = async (
     return;
   }
 
+  // We use a keep-alive interval to prevent the service worker from becoming
+  // inactive during the SSO flow.
+  const keepAliveInterval = setInterval(() => {
+    // This check is a safeguard. If the flow has ended for any reason
+    // but the interval is still running, we clear it.
+    if (!activeFlows.has(flowId)) {
+      clearInterval(keepAliveInterval);
+      return;
+    }
+    // A no-op call to a chrome API resets the service worker's inactivity timer.
+    chrome.runtime.getPlatformInfo(() => {});
+  }, KEEP_ALIVE_INTERVAL_MS);
+
   // If no flow is active, start a new one.
-  processSsoFlow(flowId, message.url, sendResponse, sender.origin!);
+  // Once the flow completes (success or error), clear the interval.
+  processSsoFlow(flowId, message.url, sendResponse, sender.origin!).finally(() =>
+    clearInterval(keepAliveInterval)
+  );
 };
 
 const initializeSsoHandler = (): void => {

@@ -26,8 +26,6 @@ import type {
   SsoRequestMessage,
 } from './types';
 
-const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000;
-
 // The public interface for the connector.
 export interface SsoOffloadingConnector {
   start: (timeoutMs?: number) => Promise<void>;
@@ -237,7 +235,7 @@ export const createSsoOffloadingConnector = (
   };
 
   return {
-    start: async (timeoutMs = SSO_FLOW_TIMEOUT_MS) => {
+    start: async (timeoutMs = 3000) => {
       // If `detachListenerOnStop` is not null, then it was set by an already
       // active SSO offloading connector.
       if (detachListenerOnStop) {
