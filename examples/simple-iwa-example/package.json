@@ -1,7 +1,7 @@
 {
   "name": "simple-iwa-example",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A basic Isolated Web App example.",
   "type": "module",
   "scripts": {
