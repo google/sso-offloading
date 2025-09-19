@@ -13,7 +13,7 @@
     "build:chrome-app": "pnpm --filter \"./examples/chrome-app-example\" run build",
     "build:iwa": "pnpm --filter \"./examples/simple-iwa-example\" run build",
     "build:extension": "pnpm --filter \"./packages/extension\" run build",
-    "bump:iwa": "node ./scripts/bump-iwa-version.js",
+    "gen-iwa-update-manifest": "node ./scripts/iwa-update-manifest.js",
     "bump:chrome-app": "node ./scripts/bump-manifest-version.js ./examples/chrome-app-example/manifest.json",
     "bump:extension": "node ./scripts/bump-manifest-version.js ./packages/extension/dist/manifest.json",
     "bump:sso-connector": "node ./scripts/bump-manifest-version.js ./packages/sso-offloading-connector/package.json"

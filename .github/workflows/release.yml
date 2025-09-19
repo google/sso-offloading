@@ -77,11 +77,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Bump IWA version and create iwa-update-manifest.json
-        run: pnpm run bump:iwa
+      - name: Create iwa-update-manifest.json
+        run: pnpm run gen-iwa-update-manifest
         env:
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
+          VERSION: ${{ steps.extract_sdk_version.outputs.version }}
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
@@ -90,11 +90,6 @@ jobs:
         env:
           KEY: ${{ secrets.IWA_KEY }}
           KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
-
-      - name: Bump Chrome App version
-        run: pnpm run bump:chrome-app
-        env:
-          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
