@@ -2,7 +2,7 @@
   "name": "sso-offloading-connector",
   "private": false,
   "description": "A client connector for Chrome Apps and Isolated Web Apps to offload SSO to a handler extension.",
-  "version": "0.1.2",
+  "version": "0.1.0",
   "type": "module",
   "repository": "google/sso-offloading",
   "publishConfig": {
