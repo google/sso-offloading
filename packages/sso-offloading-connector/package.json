@@ -6,7 +6,7 @@
   "type": "module",
   "repository": "google/sso-offloading",
   "publishConfig": {
-  "registry": "https://wombat-dressing-room.appspot.com"
+    "registry": "https://wombat-dressing-room.appspot.com"
   },
   "files": [
     "dist",

@@ -15,11 +15,19 @@
   ],
   "start_url": "/",
   "display": "standalone",
-  "display_override": ["borderless"],
+  "display_override": [
+    "borderless"
+  ],
   "scope": "/",
   "permissions_policy": {
-    "controlled-frame": ["self"],
-    "window-management": ["self"],
-    "cross-origin-isolated": ["self"]
+    "controlled-frame": [
+      "self"
+    ],
+    "window-management": [
+      "self"
+    ],
+    "cross-origin-isolated": [
+      "self"
+    ]
   }
 }

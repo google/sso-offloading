@@ -51,7 +51,7 @@ runs:
         cat <<'EOF' >> $GITHUB_OUTPUT
         <?xml version=\"1.0\" encoding=\"UTF-8\"?>
         <gupdate xmlns=\"http://www.google.com/update2/response\" protocol=\"2.0\">
-          <app appid=\"${{ inputs.chrome-app-id }}\">
+          <app appid=\"${{ inputs.app-id }}\">
             <updatecheck codebase=\"https://github.com/${{ inputs.repository }}/releases/download/${{ inputs.github-tag }}/${{ inputs.crx-filename }}\" version=\"${{ inputs.app-version }}\"/>
           </app>
         </gupdate>

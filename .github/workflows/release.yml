@@ -12,7 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Unified Release
+
+# To make a release: 
+# Update SDK version (and extension version, if anything was changed there too). 
+# Use `pnpm run bump:sso-connector <version>`.
+# Then, create a GitHub tag on the last commit that should be included in the 
+# release (only tags on main branch are eligible for release). Format: `v<version>`,
+# for example v1.1.1.
+
+# Example apps follow the SDK (SSO Offloading Connector) versioning. 
+# The extension has its own version.
+
+name: Release
 
 on:
   push:
@@ -23,6 +34,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # if: github.ref == 'refs/heads/main'
     permissions:
       contents: write   
       packages: write 
@@ -77,11 +89,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Bump IWA version and create iwa-update-manifest.json
-        run: pnpm run bump:iwa
+      - name: Create iwa-update-manifest.json
+        run: pnpm run gen-iwa-update-manifest
         env:
           TAG: ${{ github.ref_name }}
-          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
+          VERSION: ${{ steps.extract_sdk_version.outputs.version }}
           ALL_TAGS_JSON: ${{ steps.get_all_tags.outputs.data }}
 
       - name: Build IWA example
@@ -90,11 +102,6 @@ jobs:
         env:
           KEY: ${{ secrets.IWA_KEY }}
           KEY_PASSPHRASE: ${{ secrets.IWA_KEY_PASSPHRASE }}
-
-      - name: Bump Chrome App version
-        run: pnpm run bump:chrome-app
-        env:
-          VERSION: ${{ steps.extract_sdk_version.outputs.version }} # Use SDK version
 
       - name: Build Chrome App example
         run: pnpm run build:chrome-app
