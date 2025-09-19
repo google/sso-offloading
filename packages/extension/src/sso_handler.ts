@@ -19,6 +19,8 @@ import trustedClients from './trusted_clients.json';
 const REDIRECT_URI_PARAM = 'redirect_uri';
 const activeFlows = new Map<string, { tabId: number; windowId: number }>();
 
+const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000;
+
 class AuthFlowError extends Error {
   redirect_uri?: string;
 
@@ -182,8 +184,18 @@ async function processSsoFlow(
     // Wait for the user to finish logging in, which resolves the promise
     // and provides the final URL.
     const capturedUrl = await redirectPromise;
+    const timeoutPromise = new Promise<string>((_, reject) =>
+      setTimeout(
+        () => reject(new AuthFlowError('The SSO flow has timed out.')),
+        SSO_FLOW_TIMEOUT_MS
+      )
+    );
 
     sendResponse({ type: 'success', redirect_uri: capturedUrl });
+    // Wait for either the user to finish the flow or for the timeout to occur.
+    const finalUrl = await Promise.race([redirectPromise, timeoutPromise]);
+
+    sendResponse({ type: 'success', redirect_uri: finalUrl });
   } catch (error: any) {
     sendResponse({
       type: 'error',
