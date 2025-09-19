@@ -35,9 +35,8 @@ export interface SsoOffloadingConnector {
 // The official ID of the SSO Offloading Handler extension.
 const SSO_OFFLOADING_EXTENSION_ID = 'jmdcfpeebneidlbnldlhcifibpkidhkn';
 
-/**
- * Pings the extension to ensure it's active before starting.
- */
+
+// Pings the extension to ensure it's active before starting.
 const pingExtension = (timeoutMs: number): Promise<void> => {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(
@@ -113,20 +112,19 @@ const createChromeAppRequestListener = (
   };
 };
 
-// Detects the app type and creates the appropriate request listener.
+// The method for intercepting requests differs between Isolated Web Apps and
+// Chrome Apps. IWAs use a `<controlledframe>` element, which provides the
+// `createWebRequestInterceptor` API. In contrast, Chrome Apps use a `<webview>`
+// element, which exposes a `webRequest`-style API (`onBeforeRequest`). This
+// function detects the available API on the provided `target` and attaches
+// the appropriate listener.
+// This method detects the app type and creates the appropriate request listener.
 // It returns a function that will detach the listener when called.
 const createRequestListener = (
   target: any,
   filter: RequestFilter,
   handleInterceptedRequest: (details: { url: string }) => void
 ): (() => void) => {
-  // The method for intercepting requests differs between Isolated Web Apps and
-  // Chrome Apps. IWAs use a `<controlledframe>` element, which provides the
-  // `createWebRequestInterceptor` API. In contrast, Chrome Apps use a `<webview>`
-  // element, which exposes a `webRequest`-style API (`onBeforeRequest`). This
-  // function detects the available API on the provided `target` and attaches
-  // the appropriate listener.
-
   // IWA (<controlledframe>)
   if (target?.request?.createWebRequestInterceptor) {
     return createIwaRequestListener(target, filter, handleInterceptedRequest);
@@ -146,9 +144,7 @@ const createRequestListener = (
   );
 };
 
-/**
- * Creates an SSO connector for offloading authentication to a Chrome Extension.
- */
+// Creates an SSO connector for offloading authentication to a Chrome Extension.
 export const createSsoOffloadingConnector = (
   target: any,
   requestFilter: RequestFilter,
@@ -191,47 +187,45 @@ export const createSsoOffloadingConnector = (
 
     const sendMessageCallback = (response: ExtensionMessage) => {
       isRequestInFlight = false;
+      try {
+        if (!response) {
+          return onInterceptError(
+            new CommunicationError('Extension sent no response.')
+          );
+        }
 
-      if (!response) {
-        return onInterceptError(
-          new CommunicationError('Extension sent no response.')
-        );
-      }
-
-      switch (response.type) {
-        case 'success':
-          updateSource(response.redirect_uri);
-          break;
-        case 'error':
-          // If the error response includes a redirect URI, we can still navigate
-          // to it to show the user the error page from the IdP.
-          if (response.redirect_uri) {
+        switch (response.type) {
+          case 'success':
             updateSource(response.redirect_uri);
-          }
-          onInterceptError(
-            new SsoOffloadingExtensionResponseError(response.message)
-          );
-          break;
-        default:
-          onInterceptError(
-            new CommunicationError(
-              'Received unexpected response type from extension: ' +
-                response?.type
-            )
-          );
+            break;
+          case 'error':
+            // If the error response includes a redirect URI, we can still navigate
+            // to it to show the user the error page from the IdP.
+            if (response.redirect_uri) {
+              updateSource(response.redirect_uri);
+            }
+            onInterceptError(
+              new SsoOffloadingExtensionResponseError(response.message)
+            );
+            break;
+          default:
+            onInterceptError(
+              new CommunicationError(
+                'Received unexpected response type from extension: ' +
+                  (response as any)?.type
+              )
+            );
+        }
+      } finally {
+        isRequestInFlight = false;
       }
     };
 
-    try {
-      chrome.runtime.sendMessage(
-        SSO_OFFLOADING_EXTENSION_ID,
-        message,
-        sendMessageCallback
-      );
-    } catch (e) {
-      isRequestInFlight = false;
-      throw e;
-    }
+    chrome.runtime.sendMessage(
+      SSO_OFFLOADING_EXTENSION_ID,
+      message,
+      sendMessageCallback
+    );
   };
 
   return {
@@ -243,6 +237,7 @@ export const createSsoOffloadingConnector = (
       }
 
       await pingExtension(timeoutMs);
+
       detachListenerOnStop = createRequestListener(
         target,
         finalFilter,
