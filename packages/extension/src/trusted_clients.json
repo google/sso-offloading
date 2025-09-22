@@ -2,5 +2,7 @@
     "isolated-app://v5uvfpi6dtpf7xhj3swcaoxfmgui645rc47uib23a5jtt477yhyaaaic": {
     "name": "simple-iwa-example"},
     "chrome-extension://abaaiopbfcagdjfghfmbiifjolfnlagf": {
-    "name": "chrome-app-example"}
+    "name": "chrome-app-example"},
+    "isolated-app://aiv4bxauvcu3zvbu6r5yynoh4atkzqqaoeof5mwz54b4zfywcrjuoaacai": {
+    "name": "iwa-sink"}
 }
