@@ -3,15 +3,8 @@
   "description": "Handles authentication flows delegated from a trusted application.",
   "version": "0.1.0",
   "manifest_version": 3,
-  "permissions": [
-    "tabs",
-    "webRequest",
-    "webNavigation",
-    "storage"
-  ],
   "host_permissions": [
-    "https://*/*",
-    "http://*/*"
+    "https://*/*"
   ],
   "background": {
     "service_worker": "service_worker.js"
