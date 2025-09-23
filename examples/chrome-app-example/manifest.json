@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "SSO Offloading Chrome App",
   "description": "Example Chrome App for SSO Offloading from WebView.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "app": {
     "background": {
       "scripts": [
