@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /*
  Copyright 2025 Google LLC
 
@@ -17,11 +18,26 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-const newVersion = process.argv[2];
+const target = process.argv[2];
+const newVersion = process.argv[3];
+
+if (!target || !['connector', 'extension'].includes(target)) {
+  console.error(
+    'Error: Please provide a valid target ("connector" or "extension") as the first argument.'
+  );
+  console.error(
+    'Usage: node scripts/bump-version.js <connector|extension> <new-version>'
+  );
+  process.exit(1);
+}
 
 if (!newVersion) {
-  console.error('Error: Please provide a new version number as an argument.');
-  console.error('Usage: node scripts/bump-version.js <new-version>');
+  console.error(
+    'Error: Please provide a new version number as the second argument.'
+  );
+  console.error(
+    'Usage: node scripts/bump-version.js <connector|extension> <new-version>'
+  );
   process.exit(1);
 }
 
@@ -32,13 +48,22 @@ if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
   process.exit(1);
 }
 
-const filesToUpdate = [
-  'packages/sso-offloading-connector/package.json',
-  'examples/simple-iwa-example/package.json',
-  'examples/simple-iwa-example/public/.well-known/manifest.webmanifest',
-  'examples/chrome-app-example/package.json',
-  'examples/chrome-app-example/manifest.json',
-];
+let filesToUpdate = [];
+
+if (target === 'connector') {
+  filesToUpdate = [
+    'packages/sso-offloading-connector/package.json',
+    'examples/simple-iwa-example/package.json',
+    'examples/simple-iwa-example/public/.well-known/manifest.webmanifest',
+    'examples/chrome-app-example/package.json',
+    'examples/chrome-app-example/manifest.json',
+  ];
+} else if (target === 'extension') {
+  filesToUpdate = [
+    'packages/extension/package.json',
+    'packages/extension/src/manifest.json',
+  ];
+}
 
 async function updateVersionInFile(filePath) {
   const absolutePath = path.resolve(process.cwd(), filePath);
@@ -49,7 +74,7 @@ async function updateVersionInFile(filePath) {
   console.log(`Updated ${filePath} to version ${newVersion}`);
 }
 
-console.log(`Bumping versions to ${newVersion}...`);
+console.log(`Bumping versions for target "${target}" to ${newVersion}...`);
 
 Promise.all(filesToUpdate.map(updateVersionInFile))
   .then(() => console.log('All versions bumped successfully!'))
