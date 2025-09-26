@@ -20,9 +20,9 @@ This project provides a solution for offloading Single Sign-On (SSO) authenticat
 
 It consists of two main parts:
 
-**SSO offloading extension**: A Chrome Extension that processes the authentication flow in a separate, top-level tab.
+[**SSO Offloading Handler**](https://chromewebstore.google.com/detail/sso-offloading-handler/jmdcfpeebneidlbnldlhcifibpkidhkn): A Chrome Extension that processes the authentication flow in a separate, top-level tab.
 
-**SSO Offloading Connector**: A TypeScript module used by the application to intercept auth requests and delegate them to the offloading extension.
+[**SSO Offloading Connector**](https://www.npmjs.com/package/sso-offloading-connector): A TypeScript module used by the application to intercept auth requests and delegate them to the offloading extension.
 
 ## SSO Offloading Extension
 
@@ -61,8 +61,6 @@ import { createSsoOffloadingConnector, SsoOffloadingConnectorError } from 'sso_o
 // Get a reference to the <controlledframe> element (or <webview>)
 const cfElement = document.getElementById('auth-cf'); // Can also be a WebView element.
 
-const SSO_EXTENSION_ID = 'abcdefghijk1234567890'; // The ID of SSO offloading extension
-
 const requestFilter: RequestFilter = {
     urls: ['https://accounts.google.com/o/oauth2/v2/auth*','https://sso.mycompany.com/*'], // Intercept all requests to these domains.
 };
@@ -73,7 +71,6 @@ const onInterceptError = (error: SsoOffloadingConnectorError): void => {
 
 // Create connector instance
 const ssoConnector = new SsoOffloadingConnector(
-  SSO_EXTENSION_ID,
   cfElement,
   requestFilter,
   onInterceptError
