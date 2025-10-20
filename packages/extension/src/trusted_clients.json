@@ -1,8 +1,20 @@
 {
     "isolated-app://v5uvfpi6dtpf7xhj3swcaoxfmgui645rc47uib23a5jtt477yhyaaaic": {
-    "name": "simple-iwa-example"},
+        "name": "simple-iwa-example"
+    },
     "chrome-extension://abaaiopbfcagdjfghfmbiifjolfnlagf": {
-    "name": "chrome-app-example"},
+        "name": "chrome-app-example"
+    },
     "isolated-app://aiv4bxauvcu3zvbu6r5yynoh4atkzqqaoeof5mwz54b4zfywcrjuoaacai": {
-    "name": "iwa-sink"}
+        "name": "iwa-sink"
+    },
+    "chrome-extension://haiffjcadagjlijoggckpgfnoeiflnem": {
+        "name": "Citrix ChromeApp GA"
+    },
+    "chrome-extension://lbfgjakkeeccemhonnolnmglmfmccaag": {
+        "name": "Citrix ChromeApp EAR"
+    },
+    "isolated-app://ov6jyjge37xqptadeo5e2n6ayoxdjqw62pgm4afavkqbnqfpesraaaic": {
+        "name": "Citrix IWA"
+    }
 }
