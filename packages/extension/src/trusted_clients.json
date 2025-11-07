@@ -16,5 +16,44 @@
     },
     "isolated-app://ov6jyjge37xqptadeo5e2n6ayoxdjqw62pgm4afavkqbnqfpesraaaic": {
         "name": "Citrix IWA"
+    },
+    "isolated-app://ckg65ilaae42o6wd3uj4xfwznhba7pz2p6kojga5c27hkwq5f66qaaic": {
+        "name": "Omnissa Dev IWA"
+    },
+    "chrome-extension://ppkfnjlimknmjoaemnpidmdlfchhehel": {
+        "name": "Omnissa Horizon Client"
+    },
+    "chrome-extension://demgbalbngngkkgjcofhdiiipjblblob": {
+        "name": "Horizon Browser Redirection"
+    },
+    "chrome-extension://cokoeepjbmmnhgdhlkpahohdaiedfjgn": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://omificdfgpipkkpdhbjmefgfgbppehke": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://plpogimmgnkkiflhpidbibfmgpkaofec": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://pllbepacblmgialkkpcceohmjakafnbb": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://dahgfgiifpnaoajmloofonkndaaafacp": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://egfpnfjeaopimgpiioeedbpmojdapaip": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://baobpecgllpajfeojepgedjdlnlfffde": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://jcnflhjcfjkplgkcinikhbgbhfldkadl": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://jkfjfbelolphkjckiolfcakgalloegek": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
+    },
+    "chrome-extension://fnbibocngjnefolmcodjkkghijpdlnfm": {
+        "name": "VDM_TRUSTED_3RD_PARTY_APPS"
     }
 }
