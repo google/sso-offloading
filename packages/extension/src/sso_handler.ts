@@ -17,7 +17,10 @@
 import trustedClients from './trusted_clients.json';
 
 const REDIRECT_URI_PARAM = 'redirect_uri';
-const activeFlows = new Map<string, { tabId: number; windowId: number }>();
+const activeFlows = new Map<
+  number,
+  { senderOrigin: string; windowId: number; keepAliveInterval?: any }
+>();
 
 // Timeout for the entire SSO flow in milliseconds (2 minutes).
 const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000;
@@ -91,9 +94,7 @@ const createNewWindow = async (
     return { tabId: newTabId, windowId: newWindow.id };
   }
 
-  throw new Error(
-    'Window creation failed to return window or tab ID.'
-  );
+  throw new Error('Window creation failed to return window or tab ID.');
 };
 
 /**
@@ -181,12 +182,11 @@ const waitForAuthRedirect = (
 };
 
 async function processSsoFlow(
-  flowId: string,
+  flowTabId: number,
   url: string,
   sendResponse: (response: ExtensionMessage) => void,
   senderOrigin: string
 ) {
-  let authTabId: number | undefined;
   let cleanupListeners = () => {};
 
   try {
@@ -194,20 +194,10 @@ async function processSsoFlow(
     const expectedRedirectUrl =
       ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin;
 
-    const authInfo = await createAuthTab(ssoUrl);
-
-    if (!authInfo) {
-      throw new Error('Failed to create a valid authentication tab.');
-    }
-
-    authTabId = authInfo.tabId;
-    activeFlows.set(flowId, authInfo);
-
     const { redirectPromise, cleanup } = waitForAuthRedirect(
-      authTabId,
+      flowTabId,
       expectedRedirectUrl
     );
-    // Save the cleanup function to ensure it runs in the `finally` block.
     cleanupListeners = cleanup;
 
     const timeoutPromise = new Promise<string>((_, reject) =>
@@ -215,9 +205,8 @@ async function processSsoFlow(
         () => reject(new AuthFlowError('The SSO flow has timed out.')),
         SSO_FLOW_TIMEOUT_MS
       )
-    );
+    ); // Wait for either the user to finish the flow or for the timeout to occur.
 
-    // Wait for either the user to finish the flow or for the timeout to occur.
     const finalUrl = await Promise.race([redirectPromise, timeoutPromise]);
 
     sendResponse({ type: 'success', redirect_uri: finalUrl });
@@ -229,11 +218,15 @@ async function processSsoFlow(
       redirect_uri: error?.redirect_uri,
     });
   } finally {
-    activeFlows.delete(flowId);
+    const flowEntry = activeFlows.get(flowTabId);
+    if (flowEntry && flowEntry.keepAliveInterval) {
+      clearInterval(flowEntry.keepAliveInterval);
+    }
+    activeFlows.delete(flowTabId);
     cleanupListeners();
 
-    if (authTabId) {
-      chrome.tabs.remove(authTabId).catch(() => {});
+    if (flowTabId) {
+      chrome.tabs.remove(flowTabId).catch(() => {});
     }
   }
 }
@@ -250,15 +243,17 @@ const handleExternalMessage = async (
   sendResponse: (response: ExtensionMessage) => void
 ): Promise<void> => {
   if (message.type === 'stop') {
-    const flowId = sender.origin;
-    if (flowId && activeFlows.has(flowId)) {
-      const flowToCancel = activeFlows.get(flowId)!;
-      // This will trigger the onRemoved listener in the running `processSsoFlow`,
-      // which will cause its promise to reject and everything to clean up.
-      chrome.tabs.remove(flowToCancel.tabId).catch(() => {
-        // Ignore errors, tab might already be gone.
-      });
-      activeFlows.delete(flowId);
+    const flowOrigin = sender.origin;
+    if (flowOrigin) {
+      // Iterate over all active flows and cancel any that belong to this origin.
+      for (const [tabId, flow] of activeFlows.entries()) {
+        if (flow.senderOrigin === flowOrigin) {
+          // This triggers the onRemoved listener, leading to flow cancellation and cleanup.
+          chrome.tabs.remove(tabId).catch(() => {
+            // Ignore errors, tab might already be gone.
+          }); // NOTE: We don't delete from activeFlows here; the finally block in processSsoFlow will.
+        }
+      }
     }
     return;
   }
@@ -270,7 +265,7 @@ const handleExternalMessage = async (
     });
     return;
   }
-  
+
   if (message.type === 'ping') {
     sendResponse({ type: 'pong' });
     return;
@@ -284,37 +279,53 @@ const handleExternalMessage = async (
     return;
   }
 
-  // At this point, we know sender has an origin because `isSsoRequestValid` checks it.
-  const flowId = sender.origin!;
+  const flowOrigin = sender.origin!;
 
-  // Check if a flow is already active for this origin.
-  if (activeFlows.has(flowId)) {
-    const existingFlow = activeFlows.get(flowId)!;
-    // Focus the existing window and tab.
-    await chrome.windows.update(existingFlow.windowId, { focused: true });
-    await chrome.tabs.update(existingFlow.tabId, { active: true });
-
-    // Focusing on an already active flow expects the user to finish it.
+  let authInfo: { tabId: number; windowId: number } | undefined;
+  try {
+    authInfo = await createAuthTab(new URL(message.url));
+  } catch (e: any) {
+    sendResponse({
+      type: 'error',
+      message: 'Failed to open authentication tab: ' + e.message,
+    });
     return;
   }
 
-  // We use a keep-alive interval to prevent the service worker from becoming
-  // inactive during the SSO flow.
+  if (!authInfo) {
+    // This case should theoretically be covered by the error catch above
+    // based on how createAuthTab is implemented (it throws on failure).
+    sendResponse({
+      type: 'error',
+      message: 'Failed to create a valid authentication tab (internal error).',
+    });
+    return;
+  }
+
   const keepAliveInterval = setInterval(() => {
-    // This check is a safeguard. If the flow has ended for any reason
-    // but the interval is still running, we clear it.
-    if (!activeFlows.has(flowId)) {
+    // Check if the flow is still active.
+    if (!activeFlows.has(authInfo.tabId)) {
       clearInterval(keepAliveInterval);
       return;
-    }
-    // A no-op call to a chrome API resets the service worker's inactivity timer.
+    } // A no-op call to a chrome API resets the service worker's inactivity timer.
     chrome.runtime.getPlatformInfo(() => {});
   }, KEEP_ALIVE_INTERVAL_MS);
 
-  // If no flow is active, start a new one.
-  // Once the flow completes (success or error), clear the interval.
-  processSsoFlow(flowId, message.url, sendResponse, sender.origin!).finally(() =>
-    clearInterval(keepAliveInterval)
+  activeFlows.set(authInfo.tabId, {
+    senderOrigin: flowOrigin,
+    windowId: authInfo.windowId,
+    keepAliveInterval,
+  });
+
+  processSsoFlow(
+    authInfo.tabId,
+    message.url,
+    sendResponse,
+    sender.origin!
+  ).finally(() =>
+    // Cleanup of the interval is now handled in processSsoFlow's finally block
+    // to ensure it's cleared if the tab is closed externally/times out.
+    {}
   );
 };
 

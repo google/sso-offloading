@@ -126,7 +126,7 @@ describe('SSO Handler', () => {
       expect.objectContaining({
         type: 'error',
         message: expect.stringContaining(
-          'Error occured during SSO flow: Failed to create a new tab for SSO flow. Error: Cannot create window'
+          'Failed to open authentication tab: Failed to create a new tab for SSO flow. Error: Cannot create window'
         ),
       })
     );
