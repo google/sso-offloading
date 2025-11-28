@@ -107,32 +107,49 @@ const waitForAuthRedirect = (
   authTabId: number,
   expectedRedirectUrl: string
 ) => {
-  let onTabUpdateListener: any;
+  let onBeforeRequestListener: any;
   let onTabRemoveListener: any;
 
   const redirectPromise = new Promise<string>(
     (resolve, reject: (reason?: any) => void) => {
-      onTabUpdateListener = (tabId: number, changeInfo: { url?: string }) => {
-        if (
-          tabId === authTabId &&
-          changeInfo.url?.startsWith(expectedRedirectUrl)
-        ) {
-          const capturedUrl = new URL(changeInfo.url);
-          // Check for standard OAuth2/OIDC error parameters in the redirect.
-          // If an error is present, the flow has failed, even though it can still
-          // redirect (hence the url is still passed in the error).
-          if (
-            capturedUrl.searchParams.has('error') ||
-            capturedUrl.searchParams.has('error_code')
-          ) {
-            const errorMessage =
-              capturedUrl.searchParams.get('error_description') ||
-              capturedUrl.searchParams.get('error') ||
-              'Identity Provider returned an error.';
-            reject(new AuthFlowError(errorMessage, changeInfo.url));
+      onBeforeRequestListener = (
+        details: chrome.webRequest.WebRequestDetails
+      ) => {
+        const capturedUrl = new URL(details.url);
+
+        if (details.tabId === authTabId && details.type === 'main_frame') {
+          // 1. Check if the navigation is to the expected redirect URL
+          if (capturedUrl.toString().startsWith(expectedRedirectUrl)) {
+            // **Block the navigation.**
+            // This prevents the browser from actually navigating away from the IdP.
+            // The flow will now complete in the extension's background script.
+
+            // 2. Check for standard OAuth2/OIDC error parameters in the redirect.
+            if (
+              capturedUrl.searchParams.has('error') ||
+              capturedUrl.searchParams.has('error_code')
+            ) {
+              const errorMessage =
+                capturedUrl.searchParams.get('error_description') ||
+                capturedUrl.searchParams.get('error') ||
+                'Identity Provider returned an error.';
+
+              // Note: we reject asynchronously to ensure the return for blocking is handled first
+              // and the promise is not resolved/rejected multiple times.
+              setTimeout(
+                () => reject(new AuthFlowError(errorMessage, details.url)),
+                0
+              );
+            } else {
+              setTimeout(() => resolve(details.url), 0);
+            }
+
+            // Crucially, cancel the request to prevent navigation.
+            return { cancel: true };
           }
-          resolve(changeInfo.url);
         }
+        // Allow all other requests
+        return {};
       };
 
       onTabRemoveListener = (tabId: number) => {
@@ -141,13 +158,22 @@ const waitForAuthRedirect = (
         }
       };
 
-      chrome.tabs.onUpdated.addListener(onTabUpdateListener);
+      chrome.webRequest.onBeforeRequest.addListener(
+        onBeforeRequestListener,
+        { tabId: authTabId, urls: ['<all_urls>'], types: ['main_frame'] },
+        ['blocking']
+      );
+
       chrome.tabs.onRemoved.addListener(onTabRemoveListener);
     }
   );
 
   const cleanup = () => {
-    chrome.tabs.onUpdated.removeListener(onTabUpdateListener);
+    try {
+      chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequestListener);
+    } catch (e) {
+      // Ignore error, listener might have already been removed.
+    }
     chrome.tabs.onRemoved.removeListener(onTabRemoveListener);
   };
 
