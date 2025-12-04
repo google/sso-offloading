@@ -63,6 +63,10 @@ const createAuthTab = async (
       type: 'normal',
       focused: true,
     });
+
+    if (!newWindow)
+      throw new Error('New window creation failed (API returned undefined)');
+    
     const newTabId = newWindow?.tabs?.[0]?.id;
     if (!newWindow.id || !newTabId)
       throw new Error('New window creation failed');
