@@ -1,0 +1,22 @@
+{
+  "type": "object",
+  "properties": {
+    "allowedApps": {
+      "type": "object",
+      "title": "Allowed Applications",
+      "description": "A collection of applications (Isolated Web Apps, Chrome Apps) permitted to communicate with this extension. The keys are the application's origin (e.g., 'chrome-extension://<id>' or 'isolated-app://<id>').",
+      "additionalProperties": {
+        "type": "object",
+        "title": "Application Details",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Optional Name",
+            "description": "An optional human-readable name for this application."
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}
