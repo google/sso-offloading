@@ -44,6 +44,10 @@ export default defineConfig({
           src: 'src/manifest.json',
           dest: '.',
         },
+        {
+          src: 'src/managed_schema.json',
+          dest: '.',
+        }
       ],
     }),
   ],
