@@ -2,20 +2,27 @@
   "type": "object",
   "properties": {
     "allowedApps": {
-      "type": "object",
+      "type": "array",
       "title": "Allowed Applications",
-      "description": "A collection of applications (Isolated Web Apps, Chrome Apps) permitted to communicate with this extension. The keys are the application's origin (e.g., 'chrome-extension://<id>' or 'isolated-app://<id>').",
-      "additionalProperties": {
+      "description": "A list of applications (Isolated Web Apps, Chrome Apps) permitted to communicate with this extension.",
+      "items": {
         "type": "object",
-        "title": "Application Details",
+        "title": "Application",
         "properties": {
+          "origin": {
+            "type": "string",
+            "title": "Application Origin",
+            "description": "The full origin, e.g., 'chrome-extension://<id>' or 'isolated-app://<id>'"
+          },
           "name": {
             "type": "string",
             "title": "Optional Name",
             "description": "An optional human-readable name for this application."
           }
         },
-        "additionalProperties": false
+        "required": [
+          "origin"
+        ]
       }
     }
   }

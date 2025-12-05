@@ -66,7 +66,7 @@ const createAuthTab = async (
 
     if (!newWindow)
       throw new Error('New window creation failed (API returned undefined)');
-    
+
     const newTabId = newWindow?.tabs?.[0]?.id;
     if (!newWindow.id || !newTabId)
       throw new Error('New window creation failed');
@@ -175,13 +175,15 @@ async function processSsoFlow(
   }
 }
 
-const getAdminAllowedApps = async (): Promise<{ [key: string]: any }> => {
+const getAdminAllowedApps = async (): Promise<Set<string>> => {
   try {
     const { allowedApps } = await chrome.storage.managed.get(['allowedApps']);
-    return allowedApps || {};
+    if (!Array.isArray(allowedApps)) return new Set();
+    const origins = allowedApps.map((app) => app.origin).filter(Boolean);
+    return new Set(origins);
   } catch (e) {
     console.error('Error fetching allowedApps:', e);
-    return {};
+    return new Set();
   }
 };
 
@@ -192,8 +194,8 @@ const isOriginAllowed = async (
   if (!origin) return false;
   if (DEFAULT_ALLOWED_ORIGINS.has(origin)) return true;
 
-  const adminAllowedApps = await getAdminAllowedApps();
-  return Object.prototype.hasOwnProperty.call(adminAllowedApps, origin);
+  const adminAllowedOrigins = await getAdminAllowedApps();
+  return adminAllowedOrigins.has(origin);
 };
 
 const handleExternalMessage = async (

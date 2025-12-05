@@ -59,6 +59,11 @@ const mockChrome = {
 vi.stubGlobal('chrome', mockChrome);
 
 let initializeSsoHandler: () => void;
+let handleExternalMessage: (
+  message: SsoRequestMessage,
+  sender: chrome.runtime.MessageSender,
+  sendResponse: (response: ExtensionMessage) => void
+) => Promise<void>;
 
 beforeAll(async () => {
   const module = await import('../sso_handler');
@@ -66,19 +71,15 @@ beforeAll(async () => {
 });
 
 describe('SSO Handler', () => {
-  let handleExternalMessage: (
-    message: SsoRequestMessage,
-    sender: chrome.runtime.MessageSender,
-    sendResponse: (response: ExtensionMessage) => void
-  ) => boolean;
   let mockSendResponse: Mock;
 
   const defaultAllowedSender: chrome.runtime.MessageSender = {
     origin:
       'isolated-app://v5uvfpi6dtpf7xhj3swcaoxfmgui645rc47uib23a5jtt477yhyaaaic',
   };
+  const adminAllowedOrigin = 'chrome-extension://adminallowedid';
   const adminAllowedSender: chrome.runtime.MessageSender = {
-    origin: 'chrome-extension://adminallowedid',
+    origin: adminAllowedOrigin,
   };
   const untrustedSender: chrome.runtime.MessageSender = {
     origin: 'https://untrusted.com',
@@ -87,13 +88,13 @@ describe('SSO Handler', () => {
   const ssoUrl =
     'https://idp.com/auth?redirect_uri=https://client.com/callback';
 
-  const mockManagedStorage = (allowedApps: object | null) => {
+  const mockManagedStorage = (allowedAppsArray: any[] | null) => {
     (mockChrome.storage.managed.get as Mock).mockImplementation((keys) => {
       if (mockChrome.runtime.lastError) {
         return Promise.reject(new Error(mockChrome.runtime.lastError.message));
       }
       const result = keys.includes('allowedApps')
-        ? { allowedApps: allowedApps || {} }
+        ? { allowedApps: allowedAppsArray || [] }
         : {};
       return Promise.resolve(result);
     });
@@ -107,7 +108,7 @@ describe('SSO Handler', () => {
     (mockChrome.runtime.onMessageExternal.hasListener as Mock).mockReturnValue(
       false
     );
-    mockManagedStorage({});
+    mockManagedStorage([]); // Default to empty array
 
     // Initialize the listener, but it will only add if hasListener is false
     initializeSsoHandler();
@@ -132,9 +133,10 @@ describe('SSO Handler', () => {
   });
 
   it('should initialize correctly ONE TIME', () => {
-    // The main check is that addListener is called, which is asserted in other tests implicitly.
-    // We rely on the hasListener mock to prevent multiple additions.
     expect(mockChrome.runtime.onMessageExternal.hasListener).toHaveBeenCalled();
+    expect(
+      mockChrome.runtime.onMessageExternal.addListener
+    ).toHaveBeenCalledTimes(1);
   });
 
   it('should respond to ping requests from a default allowed sender', async () => {
@@ -143,19 +145,18 @@ describe('SSO Handler', () => {
       defaultAllowedSender,
       mockSendResponse
     );
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
   });
 
   it('should respond to ping requests from an admin allowed sender', async () => {
-    mockManagedStorage({
-      'chrome-extension://adminallowedid': { name: 'Admin Allowed' },
-    });
+    mockManagedStorage([{ origin: adminAllowedOrigin, name: 'Admin Allowed' }]);
     await handleExternalMessage(
       { type: 'ping' },
       adminAllowedSender,
       mockSendResponse
     );
-        await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
   });
 
@@ -174,7 +175,7 @@ describe('SSO Handler', () => {
       sender,
       mockSendResponse
     );
-        await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({
       type: 'error',
       message: 'Request from an untrusted origin.',
@@ -182,25 +183,26 @@ describe('SSO Handler', () => {
   });
 
   it('should allow requests from DEFAULT_ALLOWED_ORIGINS even with empty managed storage', async () => {
-    mockManagedStorage({});
+    mockManagedStorage([]);
     await handleExternalMessage(
       { type: 'ping' },
       defaultAllowedSender,
       mockSendResponse
     );
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
   });
 
   it('should allow requests from origins listed in chrome.storage.managed', async () => {
-    mockManagedStorage({
-      'chrome-extension://adminallowedid': { name: 'Test Admin App' },
-    });
+    mockManagedStorage([
+      { origin: adminAllowedOrigin, name: 'Test Admin App' },
+    ]);
     await handleExternalMessage(
       { type: 'ping' },
       adminAllowedSender,
       mockSendResponse
     );
-        await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
   });
 
@@ -214,6 +216,7 @@ describe('SSO Handler', () => {
       defaultAllowedSender,
       mockSendResponse
     );
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({ type: 'pong' });
     mockSendResponse.mockClear();
 
@@ -223,7 +226,7 @@ describe('SSO Handler', () => {
       adminAllowedSender,
       mockSendResponse
     );
-        await vi.runAllTimersAsync();
+    await vi.runAllTimersAsync();
     expect(mockSendResponse).toHaveBeenCalledWith({
       type: 'error',
       message: 'Request from an untrusted origin.',
@@ -234,13 +237,12 @@ describe('SSO Handler', () => {
     (mockChrome.windows.getLastFocused as Mock).mockResolvedValue({ id: 1 });
     (mockChrome.tabs.create as Mock).mockResolvedValue({ id: 123 });
 
-    const promise = handleExternalMessage(
+    await handleExternalMessage(
       { type: 'sso_request', url: ssoUrl },
       defaultAllowedSender,
       mockSendResponse
     );
     await vi.runAllTimersAsync();
-    await promise;
 
     expect(mockChrome.tabs.create).toHaveBeenCalledWith(
       expect.objectContaining({ url: ssoUrl })
@@ -248,19 +250,16 @@ describe('SSO Handler', () => {
   });
 
   it('should handle sso_request and open a tab for admin allowed sender', async () => {
-    mockManagedStorage({
-      'chrome-extension://adminallowedid': { name: 'Admin Allowed' },
-    });
+    mockManagedStorage([{ origin: adminAllowedOrigin, name: 'Admin Allowed' }]);
     (mockChrome.windows.getLastFocused as Mock).mockResolvedValue({ id: 1 });
     (mockChrome.tabs.create as Mock).mockResolvedValue({ id: 123 });
 
-    const promise = handleExternalMessage(
+    await handleExternalMessage(
       { type: 'sso_request', url: ssoUrl },
       adminAllowedSender,
       mockSendResponse
     );
     await vi.runAllTimersAsync();
-    await promise;
 
     expect(mockChrome.tabs.create).toHaveBeenCalledWith(
       expect.objectContaining({ url: ssoUrl })
@@ -292,14 +291,3 @@ describe('SSO Handler', () => {
   });
 });
 
-// Minimal interfaces for messages (assuming these are defined elsewhere)
-interface SsoRequestMessage {
-  type: 'sso_request' | 'ping' | 'stop';
-  url?: string;
-}
-
-interface ExtensionMessage {
-  type: 'success' | 'error' | 'pong';
-  redirect_uri?: string;
-  message?: string;
-}
