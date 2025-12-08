@@ -4,7 +4,7 @@
   "version": "0.1.2",
  "manifest_version": 3,
  "storage": {
-    "managed_schema": "managed_schema.json"
+    "managed_schema": "schema.json"
   },
  "permissions": [
   "storage",

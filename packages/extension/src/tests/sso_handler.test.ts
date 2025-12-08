@@ -89,14 +89,12 @@ describe('SSO Handler', () => {
     'https://idp.com/auth?redirect_uri=https://client.com/callback';
 
   const mockManagedStorage = (allowedAppsArray: any[] | null) => {
-    (mockChrome.storage.managed.get as Mock).mockImplementation((keys) => {
+    (mockChrome.storage.managed.get as Mock).mockImplementation(() => {
       if (mockChrome.runtime.lastError) {
         return Promise.reject(new Error(mockChrome.runtime.lastError.message));
       }
-      const result = keys.includes('allowedApps')
-        ? { allowedApps: allowedAppsArray || [] }
-        : {};
-      return Promise.resolve(result);
+
+      return Promise.resolve({ allowedApps: allowedAppsArray });
     });
   };
 

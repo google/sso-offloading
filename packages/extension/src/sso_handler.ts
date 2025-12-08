@@ -142,12 +142,9 @@ async function processSsoFlow(
 ) {
   let cleanupListeners = () => {};
   try {
-    const ssoUrl = new URL(url);
-    const expectedRedirectUrl =
-      ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin;
     const { redirectPromise, cleanup } = waitForAuthRedirect(
       flowTabId,
-      expectedRedirectUrl
+      new URL(url).searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
     );
     cleanupListeners = cleanup;
 
@@ -157,7 +154,9 @@ async function processSsoFlow(
         SSO_FLOW_TIMEOUT_MS
       )
     );
+
     const finalUrl = await Promise.race([redirectPromise, timeoutPromise]);
+
     sendResponse({ type: 'success', redirect_uri: finalUrl });
   } catch (error: any) {
     sendResponse({
@@ -169,22 +168,34 @@ async function processSsoFlow(
     const flowEntry = activeFlows.get(flowTabId);
     if (flowEntry?.keepAliveInterval)
       clearInterval(flowEntry.keepAliveInterval);
+    
     activeFlows.delete(flowTabId);
     cleanupListeners();
+    
     if (flowTabId) chrome.tabs.remove(flowTabId).catch(() => {});
   }
 }
 
-const getAdminAllowedApps = async (): Promise<Set<string>> => {
-  try {
-    const { allowedApps } = await chrome.storage.managed.get(['allowedApps']);
-    if (!Array.isArray(allowedApps)) return new Set();
-    const origins = allowedApps.map((app) => app.origin).filter(Boolean);
-    return new Set(origins);
-  } catch (e) {
-    console.error('Error fetching allowedApps:', e);
-    return new Set();
-  }
+const getAdminAllowedApps = (): Promise<Set<string>> => {
+  return chrome.storage.managed
+    .get()
+    .then((storageObject) => {
+      const { allowedApps } = storageObject;
+
+      if (!Array.isArray(allowedApps)) {
+        return new Set();
+      }
+
+      const allowedOrigins = allowedApps
+        .map((app) => app.origin)
+        .filter(Boolean);
+
+      return new Set(allowedOrigins); 
+    })
+    .catch((e) => {
+      console.error('Error fetching allowedApps:', e);
+      return new Set(); 
+    });
 };
 
 const isOriginAllowed = async (
@@ -194,8 +205,16 @@ const isOriginAllowed = async (
   if (!origin) return false;
   if (DEFAULT_ALLOWED_ORIGINS.has(origin)) return true;
 
-  const adminAllowedOrigins = await getAdminAllowedApps();
-  return adminAllowedOrigins.has(origin);
+return (
+  getAdminAllowedApps()
+    .then((adminAllowedOrigins) => {
+      return adminAllowedOrigins.has(origin);
+    })
+    .catch((error) => {
+      console.error('Error retrieving allowed origins:', error);
+      return false;
+    })
+);
 };
 
 const handleExternalMessage = async (
@@ -203,16 +222,9 @@ const handleExternalMessage = async (
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionMessage) => void
 ): Promise<void> => {
-  if (message.type === 'stop') {
-    if (sender.origin) {
-      activeFlows.forEach((flow, tabId) => {
-        if (flow.senderOrigin === sender.origin)
-          chrome.tabs.remove(tabId).catch(() => {});
-      });
-    }
-    return;
-  }
-
+  const { origin } = sender;
+  
+  // 1. Guard against unallowed origins
   if (!(await isOriginAllowed(sender))) {
     return sendResponse({
       type: 'error',
@@ -220,28 +232,60 @@ const handleExternalMessage = async (
     });
   }
 
-  if (message.type === 'ping') return sendResponse({ type: 'pong' });
-  if (message.type !== 'sso_request' || !message.url)
-    return sendResponse({ type: 'error', message: 'Invalid request.' });
+  // 2. Handle 'stop' message (cleanup and early exit)
+  if (message.type === 'stop') {
+    if (origin) {
+      activeFlows.forEach((flow, tabId) => {
+        if (flow.senderOrigin === origin) {
+          // Use a void return for the Promise from remove to satisfy TypeScript, 
+          // and catch the rejection silently, as is currently done.
+          void chrome.tabs.remove(tabId).catch(() => {});
+        }
+      });
+    }
+    return;
+  }
 
-  const flowOrigin = sender.origin!;
+  // 3. Handle 'ping' message (simple response and early exit)
+  if (message.type === 'ping') {
+    return sendResponse({ type: 'pong' });
+  }
+
+  // 4. Validate 'sso_request' structure and command type
+  if (message.type !== 'sso_request' || !message.url) {
+    return sendResponse({ type: 'error', message: 'Invalid or incomplete SSO request.' });
+  }
+  
   try {
-    const authInfo = await createAuthTab(new URL(message.url));
+    const authUrl = new URL(message.url);
+    const authInfo = await createAuthTab(authUrl); // { tabId, windowId }
+
+    // Start keep-alive interval
     const keepAliveInterval = setInterval(() => {
-      if (!activeFlows.has(authInfo.tabId)) clearInterval(keepAliveInterval);
-      else chrome.runtime.getPlatformInfo(() => {});
+      // Clear interval if the flow is no longer active
+      if (!activeFlows.has(authInfo.tabId)) {
+        clearInterval(keepAliveInterval);
+      } else {
+        // Ping the extension to prevent idle suspension
+        void chrome.runtime.getPlatformInfo(() => {});
+      }
     }, KEEP_ALIVE_INTERVAL_MS);
 
+    // Register and start the flow
     activeFlows.set(authInfo.tabId, {
-      senderOrigin: flowOrigin,
+      senderOrigin: origin!,
       windowId: authInfo.windowId,
       keepAliveInterval,
     });
-    processSsoFlow(authInfo.tabId, message.url, sendResponse, flowOrigin);
-  } catch (e: any) {
+    
+    processSsoFlow(authInfo.tabId, message.url, sendResponse, origin!);
+    
+  } catch (e) {
+    const errorMessage = (e as Error)?.message || 'An unknown error occurred.';
+    
     sendResponse({
       type: 'error',
-      message: `Failed to start auth flow: ${e.message}`,
+      message: `Failed to start auth flow: ${errorMessage}`,
     });
   }
 };

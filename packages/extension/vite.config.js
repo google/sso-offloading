@@ -45,7 +45,7 @@ export default defineConfig({
           dest: '.',
         },
         {
-          src: 'src/managed_schema.json',
+          src: 'src/schema.json',
           dest: '.',
         }
       ],
