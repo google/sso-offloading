@@ -14,168 +14,121 @@
  limitations under the License.
  */
 
-import trustedClients from './trusted_clients.json';
-
 const REDIRECT_URI_PARAM = 'redirect_uri';
 const activeFlows = new Map<
   number,
   { senderOrigin: string; windowId: number; keepAliveInterval?: any }
 >();
 
-// Timeout for the entire SSO flow in milliseconds (2 minutes).
-const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000;
-// Interval to keep the service worker alive, should be less than 30s.
-const KEEP_ALIVE_INTERVAL_MS = 20 * 1000;
+const SSO_FLOW_TIMEOUT_MS = 2 * 60 * 1000; // 2 minutes
+const KEEP_ALIVE_INTERVAL_MS = 20 * 1000; // 20 seconds
+
+const DEFAULT_ALLOWED_ORIGINS = new Set<string>([
+  'isolated-app://v5uvfpi6dtpf7xhj3swcaoxfmgui645rc47uib23a5jtt477yhyaaaic', // simple-iwa-example
+  'chrome-extension://abaaiopbfcagdjfghfmbiifjolfnlagf', // chrome-app-example
+  'isolated-app://aiv4bxauvcu3zvbu6r5yynoh4atkzqqaoeof5mwz54b4zfywcrjuoaacai', // iwa-sink
+]);
 
 class AuthFlowError extends Error {
-  redirect_uri?: string;
-
-  constructor(message: string, redirect_uri?: string) {
+  constructor(
+    message: string,
+    public redirect_uri?: string
+  ) {
     super(message);
     this.name = 'AuthFlowError';
-    // Authorization resulting in an error can still
-    // include a `redirect_uri` or `error_uri` for the final redirection
-    // https://www.oauth.com/oauth2-servers/authorization/the-authorization-response/
-    this.redirect_uri = redirect_uri;
   }
 }
 
-// Finds the last focused window or creates a new one for the auth flow.
+// Attempts to create a tab in the last focused window, falling back to a new window.
 const createAuthTab = async (
   url: URL
-): Promise<{ tabId: number; windowId: number } | undefined> => {
-  return getLastFocusedWindow(url)
-    .catch(() => {
-      return createNewWindow(url);
-    })
-    .catch((e) => {
-      throw new Error('Failed to create a new tab for SSO flow. ' + e);
+): Promise<{ tabId: number; windowId: number }> => {
+  try {
+    const lastFocusedWindow = await chrome.windows.getLastFocused({
+      windowTypes: ['normal'],
     });
-};
+    if (!lastFocusedWindow?.id) throw new Error('No last focused window');
+    const newTab = await chrome.tabs.create({
+      windowId: lastFocusedWindow.id,
+      url: url.toString(),
+      active: true,
+    });
+    if (!newTab.id) throw new Error('Tab creation failed');
+    await chrome.windows.update(lastFocusedWindow.id, { focused: true });
+    return { tabId: newTab.id, windowId: lastFocusedWindow.id };
+  } catch {
+    // Fallback to creating a new window
+    const newWindow = await chrome.windows.create({
+      url: url.toString(),
+      type: 'normal',
+      focused: true,
+    });
 
-const getLastFocusedWindow = async (
-  url: URL
-): Promise<{ tabId: number; windowId: number }> => {
-  const lastFocusedWindow = await chrome.windows.getLastFocused({
-    windowTypes: ['normal'],
-  });
+    if (!newWindow)
+      throw new Error('New window creation failed (API returned undefined)');
 
-  if (!lastFocusedWindow?.id) {
-    throw new Error('No last focused window found.');
-  }
-
-  const newTab = await chrome.tabs.create({
-    windowId: lastFocusedWindow.id,
-    url: url.toString(),
-    active: true,
-  });
-
-  await chrome.windows.update(lastFocusedWindow.id, { focused: true });
-
-  if (!newTab.id) {
-    throw new Error('Tab was created but did not return an ID.');
-  }
-
-  return { tabId: newTab.id, windowId: lastFocusedWindow.id };
-};
-
-const createNewWindow = async (
-  url: URL
-): Promise<{ tabId: number; windowId: number }> => {
-  const newWindow = await chrome.windows.create({
-    url: url.toString(),
-    type: 'normal',
-    focused: true,
-  });
-
-  const newTabId = newWindow?.tabs?.[0]?.id;
-
-  if (newTabId && newWindow.id) {
+    const newTabId = newWindow?.tabs?.[0]?.id;
+    if (!newWindow.id || !newTabId)
+      throw new Error('New window creation failed');
     return { tabId: newTabId, windowId: newWindow.id };
   }
-
-  throw new Error('Window creation failed to return window or tab ID.');
 };
 
-/**
- * Monitors a tab for a specific redirect URL or for the user closing the tab.
- * This function sets up listeners and returns a Promise that acts as a signal.
- * - The Promise resolves with the final URL if the user completes the flow.
- * - The Promise rejects if the user closes the auth tab, canceling the flow.
- * It also returns a `cleanup` function to remove listeners.
- */
+// Monitors a tab for redirect or closure.
 const waitForAuthRedirect = (
   authTabId: number,
   expectedRedirectUrl: string
 ) => {
-  let onBeforeRequestListener: any;
-  let onTabRemoveListener: any;
+  let onBeforeRequestListener: any, onTabRemoveListener: any;
 
-  const redirectPromise = new Promise<string>(
-    (resolve, reject: (reason?: any) => void) => {
-      onBeforeRequestListener = (
-        details: chrome.webRequest.WebRequestDetails
-      ) => {
+  const redirectPromise = new Promise<string>((resolve, reject) => {
+    onBeforeRequestListener = (
+      details: chrome.webRequest.WebRequestDetails
+    ) => {
+      if (
+        details.tabId === authTabId &&
+        details.type === 'main_frame' &&
+        details.url.startsWith(expectedRedirectUrl)
+      ) {
         const capturedUrl = new URL(details.url);
+        const hasError =
+          capturedUrl.searchParams.has('error') ||
+          capturedUrl.searchParams.has('error_code');
+        const errorMessage =
+          capturedUrl.searchParams.get('error_description') ||
+          capturedUrl.searchParams.get('error') ||
+          'Identity Provider error.';
 
-        if (details.tabId === authTabId && details.type === 'main_frame') {
-          // 1. Check if the navigation is to the expected redirect URL
-          if (capturedUrl.toString().startsWith(expectedRedirectUrl)) {
-            // **Block the navigation.**
-            // This prevents the browser from actually navigating away from the IdP.
-            // The flow will now complete in the extension's background script.
+        setTimeout(
+          () =>
+            hasError
+              ? reject(new AuthFlowError(errorMessage, details.url))
+              : resolve(details.url),
+          0
+        );
+        return { cancel: true }; // Block navigation
+      }
+      return {};
+    };
 
-            // 2. Check for standard OAuth2/OIDC error parameters in the redirect.
-            if (
-              capturedUrl.searchParams.has('error') ||
-              capturedUrl.searchParams.has('error_code')
-            ) {
-              const errorMessage =
-                capturedUrl.searchParams.get('error_description') ||
-                capturedUrl.searchParams.get('error') ||
-                'Identity Provider returned an error.';
+    onTabRemoveListener = (tabId: number) => {
+      if (tabId === authTabId)
+        reject(new AuthFlowError('The SSO flow has been cancelled.'));
+    };
 
-              // Note: we reject asynchronously to ensure the return for blocking is handled first
-              // and the promise is not resolved/rejected multiple times.
-              setTimeout(
-                () => reject(new AuthFlowError(errorMessage, details.url)),
-                0
-              );
-            } else {
-              setTimeout(() => resolve(details.url), 0);
-            }
-
-            // Crucially, cancel the request to prevent navigation.
-            return { cancel: true };
-          }
-        }
-        // Allow all other requests
-        return {};
-      };
-
-      onTabRemoveListener = (tabId: number) => {
-        if (tabId === authTabId) {
-          reject(new AuthFlowError('The SSO flow has been cancelled.'));
-        }
-      };
-
-      chrome.webRequest.onBeforeRequest.addListener(
-        onBeforeRequestListener,
-        { tabId: authTabId, urls: ['<all_urls>'], types: ['main_frame'] },
-        ['blocking']
-      );
-
-      chrome.tabs.onRemoved.addListener(onTabRemoveListener);
-    }
-  );
+    chrome.webRequest.onBeforeRequest.addListener(
+      onBeforeRequestListener,
+      { tabId: authTabId, urls: ['<all_urls>'], types: ['main_frame'] },
+      ['blocking']
+    );
+    chrome.tabs.onRemoved.addListener(onTabRemoveListener);
+  });
 
   const cleanup = () => {
-    try {
+    if (onBeforeRequestListener)
       chrome.webRequest.onBeforeRequest.removeListener(onBeforeRequestListener);
-    } catch (e) {
-      // Ignore error, listener might have already been removed.
-    }
-    chrome.tabs.onRemoved.removeListener(onTabRemoveListener);
+    if (onTabRemoveListener)
+      chrome.tabs.onRemoved.removeListener(onTabRemoveListener);
   };
 
   return { redirectPromise, cleanup };
@@ -188,15 +141,10 @@ async function processSsoFlow(
   senderOrigin: string
 ) {
   let cleanupListeners = () => {};
-
   try {
-    const ssoUrl = new URL(url);
-    const expectedRedirectUrl =
-      ssoUrl.searchParams.get(REDIRECT_URI_PARAM) || senderOrigin;
-
     const { redirectPromise, cleanup } = waitForAuthRedirect(
       flowTabId,
-      expectedRedirectUrl
+      new URL(url).searchParams.get(REDIRECT_URI_PARAM) || senderOrigin
     );
     cleanupListeners = cleanup;
 
@@ -205,36 +153,68 @@ async function processSsoFlow(
         () => reject(new AuthFlowError('The SSO flow has timed out.')),
         SSO_FLOW_TIMEOUT_MS
       )
-    ); // Wait for either the user to finish the flow or for the timeout to occur.
+    );
 
     const finalUrl = await Promise.race([redirectPromise, timeoutPromise]);
 
     sendResponse({ type: 'success', redirect_uri: finalUrl });
   } catch (error: any) {
-    // If an error occurs (e.g., timeout, user cancellation), send an error response.
     sendResponse({
       type: 'error',
-      message: 'Error occured during SSO flow: ' + error.message,
+      message: `SSO flow error: ${error.message}`,
       redirect_uri: error?.redirect_uri,
     });
   } finally {
     const flowEntry = activeFlows.get(flowTabId);
-    if (flowEntry && flowEntry.keepAliveInterval) {
+    if (flowEntry?.keepAliveInterval)
       clearInterval(flowEntry.keepAliveInterval);
-    }
+    
     activeFlows.delete(flowTabId);
     cleanupListeners();
-
-    if (flowTabId) {
-      chrome.tabs.remove(flowTabId).catch(() => {});
-    }
+    
+    if (flowTabId) chrome.tabs.remove(flowTabId).catch(() => {});
   }
 }
 
-const isSsoRequestValid = (sender: chrome.runtime.MessageSender): boolean => {
-  const flowId = sender.origin;
-  console.log(flowId);
-  return !!flowId && flowId in trustedClients;
+const getAdminAllowedApps = (): Promise<Set<string>> => {
+  return chrome.storage.managed
+    .get()
+    .then((storageObject) => {
+      const { allowedApps } = storageObject;
+
+      if (!Array.isArray(allowedApps)) {
+        return new Set();
+      }
+
+      const allowedOrigins = allowedApps
+        .map((app) => app.origin)
+        .filter(Boolean);
+
+      return new Set(allowedOrigins); 
+    })
+    .catch((e) => {
+      console.error('Error fetching allowedApps:', e);
+      return new Set(); 
+    });
+};
+
+const isOriginAllowed = async (
+  sender: chrome.runtime.MessageSender
+): Promise<boolean> => {
+  const origin = sender.origin;
+  if (!origin) return false;
+  if (DEFAULT_ALLOWED_ORIGINS.has(origin)) return true;
+
+return (
+  getAdminAllowedApps()
+    .then((adminAllowedOrigins) => {
+      return adminAllowedOrigins.has(origin);
+    })
+    .catch((error) => {
+      console.error('Error retrieving allowed origins:', error);
+      return false;
+    })
+);
 };
 
 const handleExternalMessage = async (
@@ -242,99 +222,84 @@ const handleExternalMessage = async (
   sender: chrome.runtime.MessageSender,
   sendResponse: (response: ExtensionMessage) => void
 ): Promise<void> => {
+  const { origin } = sender;
+  
+  // 1. Guard against unallowed origins
+  if (!(await isOriginAllowed(sender))) {
+    return sendResponse({
+      type: 'error',
+      message: 'Request from an untrusted origin.',
+    });
+  }
+
+  // 2. Handle 'stop' message (cleanup and early exit)
   if (message.type === 'stop') {
-    const flowOrigin = sender.origin;
-    if (flowOrigin) {
-      // Iterate over all active flows and cancel any that belong to this origin.
-      for (const [tabId, flow] of activeFlows.entries()) {
-        if (flow.senderOrigin === flowOrigin) {
-          // This triggers the onRemoved listener, leading to flow cancellation and cleanup.
-          chrome.tabs.remove(tabId).catch(() => {
-            // Ignore errors, tab might already be gone.
-          }); // NOTE: We don't delete from activeFlows here; the finally block in processSsoFlow will.
+    if (origin) {
+      activeFlows.forEach((flow, tabId) => {
+        if (flow.senderOrigin === origin) {
+          // Use a void return for the Promise from remove to satisfy TypeScript, 
+          // and catch the rejection silently, as is currently done.
+          void chrome.tabs.remove(tabId).catch(() => {});
         }
-      }
+      });
     }
     return;
   }
 
-  if (!isSsoRequestValid(sender)) {
-    sendResponse({
-      type: 'error',
-      message: 'Request from an untrusted origin.',
-    });
-    return;
-  }
-
+  // 3. Handle 'ping' message (simple response and early exit)
   if (message.type === 'ping') {
-    sendResponse({ type: 'pong' });
-    return;
+    return sendResponse({ type: 'pong' });
   }
 
+  // 4. Validate 'sso_request' structure and command type
   if (message.type !== 'sso_request' || !message.url) {
-    sendResponse({
-      type: 'error',
-      message: 'Request is invalid',
-    });
-    return;
+    return sendResponse({ type: 'error', message: 'Invalid or incomplete SSO request.' });
   }
-
-  const flowOrigin = sender.origin!;
-
-  let authInfo: { tabId: number; windowId: number } | undefined;
+  
   try {
-    authInfo = await createAuthTab(new URL(message.url));
-  } catch (e: any) {
+    const authUrl = new URL(message.url);
+    const authInfo = await createAuthTab(authUrl); // { tabId, windowId }
+
+    // Start keep-alive interval
+    const keepAliveInterval = setInterval(() => {
+      // Clear interval if the flow is no longer active
+      if (!activeFlows.has(authInfo.tabId)) {
+        clearInterval(keepAliveInterval);
+      } else {
+        // Ping the extension to prevent idle suspension
+        void chrome.runtime.getPlatformInfo(() => {});
+      }
+    }, KEEP_ALIVE_INTERVAL_MS);
+
+    // Register and start the flow
+    activeFlows.set(authInfo.tabId, {
+      senderOrigin: origin!,
+      windowId: authInfo.windowId,
+      keepAliveInterval,
+    });
+    
+    processSsoFlow(authInfo.tabId, message.url, sendResponse, origin!);
+    
+  } catch (e) {
+    const errorMessage = (e as Error)?.message || 'An unknown error occurred.';
+    
     sendResponse({
       type: 'error',
-      message: 'Failed to open authentication tab: ' + e.message,
+      message: `Failed to start auth flow: ${errorMessage}`,
     });
-    return;
   }
-
-  if (!authInfo) {
-    // This case should theoretically be covered by the error catch above
-    // based on how createAuthTab is implemented (it throws on failure).
-    sendResponse({
-      type: 'error',
-      message: 'Failed to create a valid authentication tab (internal error).',
-    });
-    return;
-  }
-
-  const keepAliveInterval = setInterval(() => {
-    // Check if the flow is still active.
-    if (!activeFlows.has(authInfo.tabId)) {
-      clearInterval(keepAliveInterval);
-      return;
-    } // A no-op call to a chrome API resets the service worker's inactivity timer.
-    chrome.runtime.getPlatformInfo(() => {});
-  }, KEEP_ALIVE_INTERVAL_MS);
-
-  activeFlows.set(authInfo.tabId, {
-    senderOrigin: flowOrigin,
-    windowId: authInfo.windowId,
-    keepAliveInterval,
-  });
-
-  processSsoFlow(
-    authInfo.tabId,
-    message.url,
-    sendResponse,
-    sender.origin!
-  ).finally(() =>
-    // Cleanup of the interval is now handled in processSsoFlow's finally block
-    // to ensure it's cleared if the tab is closed externally/times out.
-    {}
-  );
 };
 
 const initializeSsoHandler = (): void => {
   if (!chrome.runtime.onMessageExternal.hasListener(handleExternalMessage)) {
-    chrome.runtime.onMessageExternal.addListener(handleExternalMessage);
+    chrome.runtime.onMessageExternal.addListener(
+      (message, sender, sendResponse) => {
+        handleExternalMessage(message, sender, sendResponse);
+        return true; // Indicate async response
+      }
+    );
   }
 };
 
-initializeSsoHandler();
-
 export default initializeSsoHandler;
+
