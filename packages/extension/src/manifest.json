@@ -1,7 +1,7 @@
 {
   "name": "SSO Offloading Handler",
   "description": "Handles authentication flows delegated from a trusted application.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "manifest_version": 3,
   "storage": {
     "managed_schema": "schema.json"
@@ -27,5 +27,6 @@
   "background": {
     "service_worker": "service_worker.js",
     "type": "module"
-  }
+  },
+  "update_url": "https://clients2.google.com/service/update2/crx"
 }
