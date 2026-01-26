@@ -1,7 +1,7 @@
 {
   "name": "SSO Offloading Handler",
   "description": "Handles authentication flows delegated from a trusted application.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "manifest_version": 3,
   "storage": {
     "managed_schema": "schema.json"
@@ -18,7 +18,7 @@
   ],
   "externally_connectable": {
     "ids": [
-      "abaaiopbfcagdjfghfmbiifjolfnlagf"
+      "*"
     ],
     "matches": [
       "isolated-app://*/*"
