@@ -61,7 +61,7 @@ jobs:
       - name: Extract SDK version from tag
         id: extract_sdk_version
         run: |
-          VERSION_TAG="${{ github.ref_name }}"
+          VERSION_TAG="${GITHUB_REF_NAME}"
           # This shell command removes the "v" prefix (e.g., v1.2.0 -> 1.2.0)
           VERSION=${VERSION_TAG#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -138,7 +138,9 @@ jobs:
           github-tag: ${{ github.ref_name }}
 
       - name: Write Extension update-manifest.xml
-        run: echo "${{ steps.generate_extension_manifest.outputs.xml-content }}" > extension-update-manifest.xml
+        run: echo "${STEPS_GENERATE_EXTENSION_MANIFEST_OUTPUTS_XML_CONTENT}" > extension-update-manifest.xml
+        env:
+          STEPS_GENERATE_EXTENSION_MANIFEST_OUTPUTS_XML_CONTENT: ${{ steps.generate_extension_manifest.outputs.xml-content }}
 
       - name: Generate Chrome App update-manifest.xml
         id: generate_app_manifest
@@ -151,7 +153,9 @@ jobs:
           github-tag: ${{ github.ref_name }}
 
       - name: Write Chrome App update-manifest.xml
-        run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome-app-update-manifest.xml
+        run: echo "${STEPS_GENERATE_APP_MANIFEST_OUTPUTS_XML_CONTENT}" > chrome-app-update-manifest.xml
+        env:
+          STEPS_GENERATE_APP_MANIFEST_OUTPUTS_XML_CONTENT: ${{ steps.generate_app_manifest.outputs.xml-content }}
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
