@@ -48,7 +48,7 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
-          VERSION_TAG="${{ github.ref_name }}"
+          VERSION_TAG="${GITHUB_REF_NAME}"
           # This shell command removes the "extension-" prefix
           VERSION=${VERSION_TAG#extension-}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -83,7 +83,9 @@ jobs:
           github-tag: ${{ github.ref_name }}
 
       - name: Write Extension update_manifest.xml
-        run: echo "${{ steps.generate_extension_manifest.outputs.xml-content }}" > extension_update_manifest.xml
+        run: echo "${STEPS_GENERATE_EXTENSION_MANIFEST_OUTPUTS_XML_CONTENT}" > extension_update_manifest.xml
+        env:
+          STEPS_GENERATE_EXTENSION_MANIFEST_OUTPUTS_XML_CONTENT: ${{ steps.generate_extension_manifest.outputs.xml-content }}
 
       - name: Create GitHub Release for Extension
         uses: ncipollo/release-action@v1

@@ -49,7 +49,7 @@ jobs:
       - name: Extract version from tag
         id: extract_version
         run: |
-          VERSION_TAG="${{ github.ref_name }}"
+          VERSION_TAG="${GITHUB_REF_NAME}"
           # This shell command removes the "connector-" prefix
           VERSION=${VERSION_TAG#connector-}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -114,7 +114,9 @@ jobs:
           github-tag: ${{ github.ref_name }}
 
       - name: Write Chrome App update_manifest.xml
-        run: echo "${{ steps.generate_app_manifest.outputs.xml-content }}" > chrome_app_update_manifest.xml
+        run: echo "${STEPS_GENERATE_APP_MANIFEST_OUTPUTS_XML_CONTENT}" > chrome_app_update_manifest.xml
+        env:
+          STEPS_GENERATE_APP_MANIFEST_OUTPUTS_XML_CONTENT: ${{ steps.generate_app_manifest.outputs.xml-content }}
 
       - name: Create GitHub Release for Connector
         uses: ncipollo/release-action@v1
