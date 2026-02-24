@@ -40,20 +40,20 @@ runs:
     - id: package
       shell: bash
       run: |
-        echo "Packaging ${{ inputs.name }} from directory: ${{ inputs.input-dir }}"
-        echo "${{ inputs.key }}" > key.pem
+        echo "Packaging ${INPUTS_NAME} from directory: ${INPUTS_INPUT_DIR}"
+        echo "${INPUTS_KEY}" > key.pem
 
-        google-chrome --pack-extension=${{ inputs.input-dir }} --pack-extension-key=key.pem
+        google-chrome --pack-extension=${INPUTS_INPUT_DIR} --pack-extension-key=key.pem
 
         # Calculate ID
         CRX_ID=$(openssl rsa -in key.pem -pubout -outform DER | sha256sum | head -c 32 | tr 0123456789abcdef abcdefghijklmnop)
         echo "Calculated ID: $CRX_ID"
         echo "id=$CRX_ID" >> $GITHUB_OUTPUT
 
-        EXPECTED_CRX_PATH="${{ inputs.input-dir }}.crx"
+        EXPECTED_CRX_PATH="${INPUTS_INPUT_DIR}.crx"
 
         if [ -f "$EXPECTED_CRX_PATH" ]; then
-          VERSIONED_CRX_NAME="${{ inputs.name }}.crx"
+          VERSIONED_CRX_NAME="${INPUTS_NAME}.crx"
           mv "$EXPECTED_CRX_PATH" "$VERSIONED_CRX_NAME"
           echo "Created CRX: $VERSIONED_CRX_NAME"
           echo "name=$VERSIONED_CRX_NAME" >> $GITHUB_OUTPUT
@@ -61,3 +61,10 @@ runs:
           echo "CRX file not found at $EXPECTED_CRX_PATH"
           exit 1
         fi
+
+      env:
+        INPUTS_NAME: ${{ inputs.name }}
+
+        INPUTS_INPUT_DIR: ${{ inputs.input-dir }}
+
+        INPUTS_KEY: ${{ inputs.key }}
